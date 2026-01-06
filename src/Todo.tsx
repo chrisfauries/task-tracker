@@ -14,6 +14,7 @@ import {
   signInWithPopup,
   GoogleAuthProvider,
   onAuthStateChanged,
+  signOut,
 } from "firebase/auth";
 import type { User } from "firebase/auth";
 
@@ -55,6 +56,16 @@ export default function App() {
   const [boardData, setBoardData] = useState<BoardData>({});
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
+  // Modal States
+  const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
+  const [newWorkerName, setNewWorkerName] = useState("");
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [workerToDelete, setWorkerToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => setUser(u));
     const boardRef = ref(db, "boarddata");
@@ -73,6 +84,28 @@ export default function App() {
     };
   }, []);
 
+  const handleAddWorker = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWorkerName.trim()) return;
+
+    const workersRef = ref(db, "boarddata");
+    push(workersRef, {
+      name: newWorkerName,
+      notes: {},
+    });
+
+    setNewWorkerName("");
+    setIsWorkerDialogOpen(false);
+  };
+
+  const confirmDeleteWorker = () => {
+    if (workerToDelete) {
+      remove(ref(db, `boarddata/${workerToDelete.id}`));
+      setIsDeleteDialogOpen(false);
+      setWorkerToDelete(null);
+    }
+  };
+
   if (!user)
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
@@ -87,24 +120,41 @@ export default function App() {
     );
 
   return (
-    // Goal #1: Entire app takes all vertical space
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
       {/* Header Area */}
-      <div className="p-4 border-b bg-white z-30">
+      <div className="p-4 border-b bg-white z-50 flex justify-between items-center shadow-sm">
         <h1 className="text-xl font-bold text-slate-700">Because Band Board</h1>
+
+        <div className="flex gap-3">
+          <button
+            onClick={() => setIsWorkerDialogOpen(true)}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-medium transition shadow-sm"
+          >
+            Add Worker
+          </button>
+          <button
+            onClick={() => signOut(auth)}
+            className="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-sm font-medium transition"
+          >
+            Logout
+          </button>
+        </div>
       </div>
 
-      {/* Main Board Area (Scrollable) */}
-      <div className="flex-1 overflow-auto p-8">
-        <div className="min-w-max">
-          {/* Header Row: Sticky Worker Spacer + Column Labels */}
-          <div className="grid grid-cols-[min-content_minmax(400px,1fr)_minmax(400px,1fr)_minmax(200px,10%)] gap-4 mb-6">
-            <div className="w-12 sticky left-0 bg-slate-50 z-20"></div>{" "}
-            {/* Spacer for sticky column */}
+      {/* Main Board Area */}
+      {/* We use py-8 but NO px-8 to ensure sticky left-0 hits the screen edge */}
+      <div className="flex-1 overflow-auto py-8">
+        <div className="min-w-[100%] flex flex-col">
+          
+          {/* Header Row */}
+          <div className="flex mb-6 items-center">
+            {/* Sticky mask for header to align with rows */}
+            <div className="sticky left-0 bg-slate-50 z-40 w-24 pl-8 flex-none"></div>
+            
             {["Assigned", "In Progress", "Completed"].map((h) => (
               <div
                 key={h}
-                className="text-center font-bold text-slate-400 uppercase text-xs tracking-widest"
+                className="w-[40%] flex-none text-center font-bold text-slate-400 uppercase text-xs tracking-widest px-4"
               >
                 {h}
               </div>
@@ -115,37 +165,121 @@ export default function App() {
           {Object.entries(boardData).map(([workerId, worker]) => (
             <div
               key={workerId}
-              // Goal #3: Grid ratios ensuring Assigned/In-Progress dominate horizontal space
-              className="grid grid-cols-[min-content_minmax(400px,1fr)_minmax(400px,1fr)_minmax(200px,10%)] gap-4 mb-4 min-h-[180px]"
+              className="flex mb-8 min-h-[250px]"
             >
-              {/* Goal #2: Sticky Worker Name Column */}
-              <div className="sticky left-0 bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-md z-20 p-2 min-w-[48px] h-full">
-                <span
-                  className="font-bold text-slate-700 whitespace-nowrap"
-                  style={{
-                    writingMode: "vertical-lr",
-                    transform: "rotate(180deg)",
-                  }}
-                >
-                  {worker.name}
-                </span>
+              {/* STICKY WORKER NAME COLUMN (THE MASK) */}
+              <div className="sticky left-0 bg-slate-50 z-30 pl-8 pr-4 flex-none w-24">
+                <div className="bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-md h-full group relative overflow-hidden">
+                  <button
+                    onClick={() => {
+                      setWorkerToDelete({ id: workerId, name: worker.name });
+                      setIsDeleteDialogOpen(true);
+                    }}
+                    className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-red-50 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 hover:text-white text-[10px] font-bold z-10"
+                  >
+                    ✕
+                  </button>
+                  <span
+                    className="font-bold text-slate-700 whitespace-nowrap select-none"
+                    style={{
+                      writingMode: "vertical-lr",
+                      transform: "rotate(180deg)",
+                    }}
+                  >
+                    {worker.name}
+                  </span>
+                </div>
               </div>
 
+              {/* COLUMNS (Drop Zones) - Set to 40% each */}
               {[0, 1, 2].map((colIndex) => (
-                <DropZone
-                  key={colIndex}
-                  workerId={workerId}
-                  colIndex={colIndex}
-                  notes={worker.notes || {}}
-                  dragOrigin={dragOrigin}
-                  onDragStart={(origin) => setDragOrigin(origin)}
-                  onDragEnd={() => setDragOrigin(null)}
-                />
+                <div key={colIndex} className="w-[40%] flex-none px-4">
+                  <DropZone
+                    workerId={workerId}
+                    colIndex={colIndex}
+                    notes={worker.notes || {}}
+                    dragOrigin={dragOrigin}
+                    onDragStart={(origin) => setDragOrigin(origin)}
+                    onDragEnd={() => setDragOrigin(null)}
+                  />
+                </div>
               ))}
             </div>
           ))}
         </div>
       </div>
+
+      {/* Add Worker Dialog */}
+      {isWorkerDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">
+              Add New Worker
+            </h2>
+            <form onSubmit={handleAddWorker}>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Worker or Student Name"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-6"
+                value={newWorkerName}
+                onChange={(e) => setNewWorkerName(e.target.value)}
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsWorkerDialogOpen(false)}
+                  className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                >
+                  Add to Board
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      {isDeleteDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border-t-4 border-red-500 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-xl font-bold text-slate-800 mb-2">
+              Delete Row?
+            </h2>
+            <p className="text-slate-600 mb-6">
+              Are you sure you want to delete{" "}
+              <span className="font-bold text-slate-900">
+                {workerToDelete?.name}
+              </span>
+              ? This will permanently remove the worker and{" "}
+              <span className="text-red-600 font-semibold">
+                all associated notes
+              </span>
+              .
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setIsDeleteDialogOpen(false)}
+                className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+              >
+                Keep Row
+              </button>
+              <button
+                onClick={confirmDeleteWorker}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+              >
+                Delete Everything
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -257,60 +391,63 @@ function DropZone({
       onDragEnter={() => setIsOver(true)}
       onDragLeave={() => setIsOver(false)}
       onDrop={handleContainerDrop}
-      className={`bg-slate-200/40 border-2 rounded-lg p-4 flex flex-col gap-3 transition-all relative group/zone min-h-[150px] ${
+      className={`bg-slate-200/40 border-2 rounded-lg p-4 flex flex-col gap-4 transition-all relative group/zone min-h-[180px] h-full ${
         isOver
           ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
           : "border-dashed border-transparent"
       }`}
     >
-      {sortedNotes.map(([id, note], index) => (
-        <StickyNote
-          key={id}
-          id={id}
-          text={note.text}
-          color={note.color}
-          column={colIndex}
-          workerId={workerId}
-          position={note.position}
-          prevPos={index > 0 ? sortedNotes[index - 1][1].position : null}
-          nextPos={
-            index < sortedNotes.length - 1
-              ? sortedNotes[index + 1][1].position
-              : null
-          }
-          onReorder={handleMove}
-          onDragStart={() => onDragStart({ workerId, colIndex })}
-          onDragEnd={onDragEnd}
-          isNew={id === autoEditId}
-          onEditStarted={() => setAutoEditId(null)}
-        />
-      ))}
-
-      <div className="flex flex-col items-center justify-center">
-        {isDraggingFromHere ? (
-          <div
-            onDragOver={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              e.currentTarget.classList.add("bg-red-100", "border-red-500");
-            }}
-            onDragLeave={(e) =>
-              e.currentTarget.classList.remove("bg-red-100", "border-red-500")
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] auto-rows-min gap-4 flex-grow">
+        {sortedNotes.map(([id, note], index) => (
+          <StickyNote
+            key={id}
+            id={id}
+            text={note.text}
+            color={note.color}
+            column={colIndex}
+            workerId={workerId}
+            position={note.position}
+            prevPos={index > 0 ? sortedNotes[index - 1][1].position : null}
+            nextPos={
+              index < sortedNotes.length - 1
+                ? sortedNotes[index + 1][1].position
+                : null
             }
-            onDrop={handleTrashDrop}
-            className="w-full border-2 border-dashed border-red-300 rounded-lg flex flex-col items-center justify-center p-4 text-red-500 transition-all"
-          >
-            <span className="text-xl">🗑️</span>
-          </div>
-        ) : (
+            onReorder={handleMove}
+            onDragStart={() => onDragStart({ workerId, colIndex })}
+            onDragEnd={onDragEnd}
+            isNew={id === autoEditId}
+            onEditStarted={() => setAutoEditId(null)}
+          />
+        ))}
+
+        <div className="flex items-center justify-center min-h-[100px] aspect-square">
           <button
             onClick={addNote}
-            className="opacity-0 group-hover/zone:opacity-100 text-slate-400 hover:text-slate-600 self-center text-2xl mt-auto transition-opacity"
+            className="opacity-0 group-hover/zone:opacity-100 text-slate-400 hover:text-slate-600 text-3xl transition-opacity p-4 border-2 border-dashed border-slate-300 rounded-lg w-full h-full flex items-center justify-center"
           >
             +
           </button>
-        )}
+        </div>
       </div>
+
+      {isDraggingFromHere && (
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.add("bg-red-100", "border-red-500", "scale-[1.02]");
+          }}
+          onDragLeave={(e) =>
+            e.currentTarget.classList.remove("bg-red-100", "border-red-500", "scale-[1.02]")
+          }
+          onDrop={handleTrashDrop}
+          className="h-12 border-2 border-dashed border-red-300 rounded-lg flex items-center justify-center text-red-500 transition-all gap-2 bg-white/50 animate-in slide-in-from-bottom-2 duration-200"
+        >
+          <span className="text-lg">🗑️</span>
+          <span className="text-xs font-bold uppercase tracking-wider">Drop to Delete</span>
+        </div>
+      )}
     </div>
   );
 }
@@ -346,7 +483,7 @@ function StickyNote({
   isNew,
   onEditStarted,
 }: StickyNoteProps) {
-  const [dropIndicator, setDropIndicator] = useState<"top" | "bottom" | null>(
+  const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
     null
   );
   const [isDragging, setIsDragging] = useState(false);
@@ -371,18 +508,31 @@ function StickyNote({
     }
   }, [isEditing]);
 
+  const handleDragOver = (e: React.DragEvent) => {
+    if (isEditing) return;
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const midPointX = rect.left + rect.width / 2;
+    setDropIndicator(e.clientX < midPointX ? "left" : "right");
+  };
+
   const handleNoteDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    const side = dropIndicator;
     setDropIndicator(null);
     onDragEnd();
+    
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
     try {
       const { noteId, oldWorkerId } = JSON.parse(rawData);
       if (noteId === id) return;
+      
       let newPos: number;
-      if (dropIndicator === "top") {
+      if (side === "left") {
         newPos = prevPos !== null ? (prevPos + position) / 2 : position / 2;
       } else {
         newPos = nextPos !== null ? (nextPos + position) / 2 : position + 1000;
@@ -409,21 +559,14 @@ function StickyNote({
   return (
     <div
       className="relative"
-      onDragOver={(e) => {
-        if (isEditing) return;
-        e.preventDefault();
-        e.stopPropagation();
-        const rect = e.currentTarget.getBoundingClientRect();
-        const midPoint = rect.top + rect.height / 2;
-        setDropIndicator(e.clientY < midPoint ? "top" : "bottom");
-      }}
+      onDragOver={handleDragOver}
       onDragLeave={() => setDropIndicator(null)}
       onDrop={handleNoteDrop}
     >
       {dropIndicator && (
         <div
-          className={`absolute left-0 right-0 h-1 bg-blue-500 rounded-full z-50 pointer-events-none ${
-            dropIndicator === "top" ? "-top-[8px]" : "-bottom-[8px]"
+          className={`absolute top-0 bottom-0 w-1 bg-blue-500 rounded-full z-50 pointer-events-none ${
+            dropIndicator === "left" ? "-left-2" : "-right-2"
           }`}
         />
       )}
@@ -446,7 +589,7 @@ function StickyNote({
         }}
         className={`${shade.bg} ${
           shade.border
-        } p-4 rotate-[-0.5deg] hover:rotate-0 transition-all relative group/note border-l-4 min-h-[100px] flex flex-col
+        } p-4 rotate-[-0.5deg] border-l-4 min-h-[180px] aspect-square flex flex-col transition-all group/note
           ${isDragging ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
           ${
             isEditing
@@ -455,26 +598,6 @@ function StickyNote({
           }
         `}
       >
-        <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/50 backdrop-blur-sm rounded-full px-2 py-1 shadow-sm z-30">
-          {Object.values(COLOR_MATRIX).map((family) => (
-            <button
-              key={family.name}
-              onClick={() =>
-                set(
-                  ref(db, `boarddata/${workerId}/notes/${id}/color`),
-                  family.name
-                )
-              }
-              className={`w-3 h-3 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform`}
-            />
-          ))}
-          <button
-            onClick={() => remove(ref(db, `boarddata/${workerId}/notes/${id}`))}
-            className="text-[10px] text-slate-500 hover:text-red-600 font-bold ml-1"
-          >
-            ✕
-          </button>
-        </div>
         <div
           ref={textRef}
           contentEditable={isEditing}
@@ -486,9 +609,32 @@ function StickyNote({
               textRef.current?.blur();
             }
           }}
-          className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap`}
+          className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap overflow-y-auto pb-6`}
         >
           {text}
+        </div>
+
+        <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/60 backdrop-blur-sm mx-4 py-1.5 rounded-full shadow-sm z-30 border border-white/50">
+          {Object.values(COLOR_MATRIX).map((family) => (
+            <button
+              key={family.name}
+              onClick={(e) => {
+                e.stopPropagation();
+                set(ref(db, `boarddata/${workerId}/notes/${id}/color`), family.name);
+              }}
+              className={`w-3.5 h-3.5 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
+            />
+          ))}
+          <div className="w-px h-3 bg-black/10 mx-1" />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              remove(ref(db, `boarddata/${workerId}/notes/${id}`));
+            }}
+            className="text-[10px] text-slate-500 hover:text-red-600 font-bold px-1"
+          >
+            ✕
+          </button>
         </div>
       </div>
     </div>
@@ -497,136 +643,11 @@ function StickyNote({
 
 // --- COLOR CONFIG ---
 const COLOR_MATRIX: Record<string, any> = {
-  Green: {
-    name: "Green",
-    shades: {
-      0: {
-        bg: "bg-emerald-100",
-        border: "border-emerald-400",
-        text: "text-emerald-900",
-      },
-      1: {
-        bg: "bg-emerald-300",
-        border: "border-emerald-600",
-        text: "text-emerald-950",
-      },
-      2: {
-        bg: "bg-emerald-50/50",
-        border: "border-emerald-200",
-        text: "text-slate-400",
-      },
-    },
-  },
-  Blue: {
-    name: "Blue",
-    shades: {
-      0: {
-        bg: "bg-blue-100",
-        border: "border-blue-400",
-        text: "text-blue-900",
-      },
-      1: {
-        bg: "bg-blue-300",
-        border: "border-blue-600",
-        text: "text-blue-950",
-      },
-      2: {
-        bg: "bg-blue-50/50",
-        border: "border-blue-200",
-        text: "text-slate-400",
-      },
-    },
-  },
-  Yellow: {
-    name: "Yellow",
-    shades: {
-      0: {
-        bg: "bg-yellow-100",
-        border: "border-yellow-400",
-        text: "text-yellow-900",
-      },
-      1: {
-        bg: "bg-yellow-300",
-        border: "border-yellow-600",
-        text: "text-yellow-950",
-      },
-      2: {
-        bg: "bg-yellow-50/50",
-        border: "border-yellow-200",
-        text: "text-slate-400",
-      },
-    },
-  },
-  Red: {
-    name: "Red",
-    shades: {
-      0: { bg: "bg-red-100", border: "border-red-400", text: "text-red-900" },
-      1: { bg: "bg-red-300", border: "border-red-600", text: "text-red-950" },
-      2: {
-        bg: "bg-red-50/50",
-        border: "border-red-200",
-        text: "text-slate-400",
-      },
-    },
-  },
-  Orange: {
-    name: "Orange",
-    shades: {
-      0: {
-        bg: "bg-orange-100",
-        border: "border-orange-400",
-        text: "text-orange-900",
-      },
-      1: {
-        bg: "bg-orange-300",
-        border: "border-orange-600",
-        text: "text-orange-950",
-      },
-      2: {
-        bg: "bg-orange-50/50",
-        border: "border-orange-200",
-        text: "text-slate-400",
-      },
-    },
-  },
-  Purple: {
-    name: "Purple",
-    shades: {
-      0: {
-        bg: "bg-purple-100",
-        border: "border-purple-400",
-        text: "text-purple-900",
-      },
-      1: {
-        bg: "bg-purple-300",
-        border: "border-purple-600",
-        text: "text-purple-950",
-      },
-      2: {
-        bg: "bg-purple-50/50",
-        border: "border-purple-200",
-        text: "text-slate-400",
-      },
-    },
-  },
-  Pink: {
-    name: "Pink",
-    shades: {
-      0: {
-        bg: "bg-pink-100",
-        border: "border-pink-400",
-        text: "text-pink-900",
-      },
-      1: {
-        bg: "bg-pink-300",
-        border: "border-pink-600",
-        text: "text-pink-950",
-      },
-      2: {
-        bg: "bg-pink-50/50",
-        border: "border-pink-200",
-        text: "text-slate-400",
-      },
-    },
-  },
+  Green: { name: "Green", shades: { 0: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-900" }, 1: { bg: "bg-emerald-300", border: "border-emerald-600", text: "text-emerald-950" }, 2: { bg: "bg-emerald-50/50", border: "border-emerald-200", text: "text-slate-400" } } },
+  Blue: { name: "Blue", shades: { 0: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-900" }, 1: { bg: "bg-blue-300", border: "border-blue-600", text: "text-blue-950" }, 2: { bg: "bg-blue-50/50", border: "border-blue-200", text: "text-slate-400" } } },
+  Yellow: { name: "Yellow", shades: { 0: { bg: "bg-yellow-100", border: "border-yellow-400", text: "text-yellow-900" }, 1: { bg: "bg-yellow-300", border: "border-yellow-600", text: "text-yellow-950" }, 2: { bg: "bg-yellow-50/50", border: "border-yellow-200", text: "text-slate-400" } } },
+  Red: { name: "Red", shades: { 0: { bg: "bg-red-100", border: "border-red-400", text: "text-red-900" }, 1: { bg: "bg-red-300", border: "border-red-600", text: "text-red-950" }, 2: { bg: "bg-red-50/50", border: "border-red-200", text: "text-slate-400" } } },
+  Orange: { name: "Orange", shades: { 0: { bg: "bg-orange-100", border: "border-orange-400", text: "text-orange-900" }, 1: { bg: "bg-orange-300", border: "border-orange-600", text: "text-orange-950" }, 2: { bg: "bg-orange-50/50", border: "border-orange-200", text: "text-slate-400" } } },
+  Purple: { name: "Purple", shades: { 0: { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-900" }, 1: { bg: "bg-purple-300", border: "border-purple-600", text: "text-purple-950" }, 2: { bg: "bg-purple-50/50", border: "border-purple-200", text: "text-slate-400" } } },
+  Pink: { name: "Pink", shades: { 0: { bg: "bg-pink-100", border: "border-pink-400", text: "text-pink-900" }, 1: { bg: "bg-pink-300", border: "border-pink-600", text: "text-pink-950" }, 2: { bg: "bg-pink-50/50", border: "border-pink-200", text: "text-slate-400" } } },
 };
