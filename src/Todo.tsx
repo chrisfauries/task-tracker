@@ -7,6 +7,7 @@ import {
   set,
   push,
   remove,
+  update,
   DataSnapshot,
 } from "firebase/database";
 import {
@@ -31,7 +32,14 @@ interface WorkerData {
   notes?: Record<string, Note>;
 }
 
+interface Category {
+  name: string;
+  items: string[];
+  color?: string;
+}
+
 type BoardData = Record<string, WorkerData>;
+type CategoriesData = Record<string, Category>;
 
 interface DragOrigin {
   workerId: string;
@@ -54,10 +62,12 @@ const provider = new GoogleAuthProvider();
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [boardData, setBoardData] = useState<BoardData>({});
+  const [categories, setCategories] = useState<CategoriesData>({});
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
   // Modal States
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [newWorkerName, setNewWorkerName] = useState("");
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -68,10 +78,17 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => setUser(u));
+
     const boardRef = ref(db, "boarddata");
     const unsubscribeDb = onValue(boardRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val() as BoardData | null;
       setBoardData(data || {});
+    });
+
+    const catRef = ref(db, "categories");
+    const unsubscribeCats = onValue(catRef, (snapshot: DataSnapshot) => {
+      const data = snapshot.val() as CategoriesData | null;
+      setCategories(data || {});
     });
 
     const handleGlobalDragEnd = () => setDragOrigin(null);
@@ -80,6 +97,7 @@ export default function App() {
     return () => {
       unsubscribeAuth();
       unsubscribeDb();
+      unsubscribeCats();
       window.removeEventListener("dragend", handleGlobalDragEnd);
     };
   }, []);
@@ -106,6 +124,39 @@ export default function App() {
     }
   };
 
+  const handleApplyCategory = (
+    catId: string,
+    workerId: string,
+    colIndex: number
+  ) => {
+    const category = categories[catId];
+    if (!category || !category.items) return;
+
+    const workerNotes = boardData[workerId]?.notes || {};
+
+    // FIX: Filter out any non-numeric positions to prevent NaN errors
+    const validPositions = Object.values(workerNotes)
+      .filter(
+        (n) =>
+          n.column === colIndex &&
+          typeof n.position === "number" &&
+          !isNaN(n.position)
+      )
+      .map((n) => n.position);
+
+    const lastPos = validPositions.length > 0 ? Math.max(...validPositions) : 0;
+
+    category.items.forEach((text, index) => {
+      const newNoteRef = push(ref(db, `boarddata/${workerId}/notes`));
+      set(newNoteRef, {
+        text,
+        column: colIndex,
+        color: category.color || "Green",
+        position: lastPos + 1000 + index * 10,
+      });
+    });
+  };
+
   if (!user)
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
@@ -121,11 +172,16 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
-      {/* Header Area */}
       <div className="p-4 border-b bg-white z-50 flex justify-between items-center shadow-sm">
         <h1 className="text-xl font-bold text-slate-700">Because Band Board</h1>
 
         <div className="flex gap-3">
+          <button
+            onClick={() => setIsCategoryDialogOpen(true)}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium transition shadow-sm"
+          >
+            Categories
+          </button>
           <button
             onClick={() => setIsWorkerDialogOpen(true)}
             className="px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm font-medium transition shadow-sm"
@@ -141,16 +197,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* Main Board Area */}
-      {/* We use py-8 but NO px-8 to ensure sticky left-0 hits the screen edge */}
       <div className="flex-1 overflow-auto py-8">
         <div className="min-w-[100%] flex flex-col">
-          
-          {/* Header Row */}
           <div className="flex mb-6 items-center">
-            {/* Sticky mask for header to align with rows */}
             <div className="sticky left-0 bg-slate-50 z-40 w-24 pl-8 flex-none"></div>
-            
             {["Assigned", "In Progress", "Completed"].map((h) => (
               <div
                 key={h}
@@ -161,13 +211,8 @@ export default function App() {
             ))}
           </div>
 
-          {/* Worker Rows */}
           {Object.entries(boardData).map(([workerId, worker]) => (
-            <div
-              key={workerId}
-              className="flex mb-8 min-h-[250px]"
-            >
-              {/* STICKY WORKER NAME COLUMN (THE MASK) */}
+            <div key={workerId} className="flex mb-8 min-h-[250px]">
               <div className="sticky left-0 bg-slate-50 z-30 pl-8 pr-4 flex-none w-24">
                 <div className="bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-md h-full group relative overflow-hidden">
                   <button
@@ -191,7 +236,6 @@ export default function App() {
                 </div>
               </div>
 
-              {/* COLUMNS (Drop Zones) - Set to 40% each */}
               {[0, 1, 2].map((colIndex) => (
                 <div key={colIndex} className="w-[40%] flex-none px-4">
                   <DropZone
@@ -209,7 +253,15 @@ export default function App() {
         </div>
       </div>
 
-      {/* Add Worker Dialog */}
+      {isCategoryDialogOpen && (
+        <CategoryDialog
+          categories={categories}
+          boardData={boardData}
+          onClose={() => setIsCategoryDialogOpen(false)}
+          onApply={handleApplyCategory}
+        />
+      )}
+
       {isWorkerDialogOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
@@ -245,7 +297,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Delete Confirmation Dialog */}
       {isDeleteDialogOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border-t-4 border-red-500 animate-in fade-in zoom-in duration-200">
@@ -257,11 +308,7 @@ export default function App() {
               <span className="font-bold text-slate-900">
                 {workerToDelete?.name}
               </span>
-              ? This will permanently remove the worker and{" "}
-              <span className="text-red-600 font-semibold">
-                all associated notes
-              </span>
-              .
+              ?
             </p>
             <div className="flex justify-end gap-3">
               <button
@@ -284,7 +331,215 @@ export default function App() {
   );
 }
 
-// --- SUB-COMPONENTS ---
+interface CategoryDialogProps {
+  categories: CategoriesData;
+  boardData: BoardData;
+  onClose: () => void;
+  onApply: (catId: string, workerId: string, colIndex: number) => void;
+}
+
+function CategoryDialog({
+  categories,
+  boardData,
+  onClose,
+  onApply,
+}: CategoryDialogProps) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [newCatName, setNewCatName] = useState("");
+
+  const handleCreate = () => {
+    if (!newCatName.trim()) return;
+    const refCat = ref(db, "categories");
+    push(refCat, {
+      name: newCatName,
+      items: ["Example Item"],
+      color: "Green",
+    });
+    setNewCatName("");
+  };
+
+  const updateItems = (id: string, newItems: string[]) => {
+    update(ref(db, `categories/${id}`), { items: newItems });
+  };
+
+  const updateColor = (id: string, color: string) => {
+    update(ref(db, `categories/${id}`), { color });
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+          <h2 className="text-2xl font-bold text-slate-800">Category Sets</h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 text-2xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-auto flex">
+          <div className="w-1/3 border-r p-6 overflow-y-auto">
+            <div className="flex gap-2 mb-6">
+              <input
+                type="text"
+                placeholder="Category Name"
+                className="flex-1 px-3 py-2 border rounded-lg text-sm"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+              />
+              <button
+                onClick={handleCreate}
+                className="bg-indigo-600 text-white px-3 rounded-lg font-bold"
+              >
+                +
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {Object.entries(categories).map(([id, cat]) => (
+                <div
+                  key={id}
+                  onClick={() => setSelectedId(id)}
+                  className={`p-4 rounded-xl cursor-pointer transition border flex justify-between items-center group ${
+                    selectedId === id
+                      ? "bg-indigo-50 border-indigo-200"
+                      : "hover:bg-slate-50 border-transparent"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-3 h-3 rounded-full ${
+                        COLOR_MATRIX[cat.color || "Green"].shades[1].bg
+                      }`}
+                    />
+                    <span className="font-bold text-slate-700">{cat.name}</span>
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      remove(ref(db, `categories/${id}`));
+                      if (selectedId === id) setSelectedId(null);
+                    }}
+                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600"
+                  >
+                    🗑️
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 p-8 bg-white overflow-y-auto">
+            {selectedId ? (
+              <div className="space-y-8">
+                <section>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                    Category Color
+                  </h3>
+                  <div className="flex gap-2">
+                    {Object.values(COLOR_MATRIX).map((family) => (
+                      <button
+                        key={family.name}
+                        onClick={() => updateColor(selectedId, family.name)}
+                        className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                          family.shades[1].bg
+                        } ${
+                          categories[selectedId].color === family.name
+                            ? "border-slate-800 scale-110"
+                            : "border-transparent"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </section>
+
+                <section>
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                    Edit Items
+                  </h3>
+                  <div className="space-y-2">
+                    {(categories[selectedId].items || []).map((item, idx) => (
+                      <div key={idx} className="flex gap-2">
+                        <input
+                          type="text"
+                          value={item}
+                          className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none font-medium text-slate-700"
+                          onChange={(e) => {
+                            const newItems = [...categories[selectedId].items];
+                            newItems[idx] = e.target.value;
+                            updateItems(selectedId, newItems);
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const newItems = categories[
+                              selectedId
+                            ].items.filter((_, i) => i !== idx);
+                            updateItems(selectedId, newItems);
+                          }}
+                          className="text-slate-300 hover:text-red-500"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      onClick={() =>
+                        updateItems(selectedId, [
+                          ...(categories[selectedId].items || []),
+                          "New Item",
+                        ])
+                      }
+                      className="w-full py-3 border-2 border-dashed border-slate-200 text-slate-400 rounded-xl hover:bg-slate-50 transition font-bold text-sm"
+                    >
+                      + Add Item
+                    </button>
+                  </div>
+                </section>
+
+                <section className="pt-8 border-t">
+                  <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">
+                    Push Category to Board
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {Object.entries(boardData).map(([wId, worker]) => (
+                      <div
+                        key={wId}
+                        className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200"
+                      >
+                        <span className="font-bold text-slate-800">
+                          {worker.name}
+                        </span>
+                        <div className="flex gap-2">
+                          {["Assigned", "Active", "Done"].map((label, idx) => (
+                            <button
+                              key={label}
+                              onClick={() => onApply(selectedId, wId, idx)}
+                              className="px-4 py-1.5 bg-white border border-slate-300 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition shadow-sm"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              </div>
+            ) : (
+              <div className="h-full flex flex-col items-center justify-center text-slate-300 italic">
+                Select a category from the left to start editing or pushing
+                notes
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface DropZoneProps {
   workerId: string;
@@ -309,15 +564,27 @@ function DropZone({
   const isDraggingFromHere =
     dragOrigin?.workerId === workerId && dragOrigin?.colIndex === colIndex;
 
+  // FIX: Added numeric check in sort and filter to prevent NaN propagation
   const sortedNotes = Object.entries(notes)
-    .filter(([_, n]) => n.column === colIndex)
-    .sort((a, b) => (a[1].position || 0) - (b[1].position || 0));
+    .filter(
+      ([_, n]) =>
+        n.column === colIndex &&
+        typeof n.position === "number" &&
+        !isNaN(n.position)
+    )
+    .sort((a, b) => a[1].position - b[1].position);
 
   const handleMove = (
     noteId: string,
     oldWorkerId: string,
     newPosition: number
   ) => {
+    // FIX: Block NaN updates early
+    if (isNaN(newPosition)) {
+      console.error("Attempted to set NaN position");
+      return;
+    }
+
     onValue(
       ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`),
       (snap) => {
@@ -436,16 +703,26 @@ function DropZone({
           onDragOver={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            e.currentTarget.classList.add("bg-red-100", "border-red-500", "scale-[1.02]");
+            e.currentTarget.classList.add(
+              "bg-red-100",
+              "border-red-500",
+              "scale-[1.02]"
+            );
           }}
           onDragLeave={(e) =>
-            e.currentTarget.classList.remove("bg-red-100", "border-red-500", "scale-[1.02]")
+            e.currentTarget.classList.remove(
+              "bg-red-100",
+              "border-red-500",
+              "scale-[1.02]"
+            )
           }
           onDrop={handleTrashDrop}
           className="h-12 border-2 border-dashed border-red-300 rounded-lg flex items-center justify-center text-red-500 transition-all gap-2 bg-white/50 animate-in slide-in-from-bottom-2 duration-200"
         >
           <span className="text-lg">🗑️</span>
-          <span className="text-xs font-bold uppercase tracking-wider">Drop to Delete</span>
+          <span className="text-xs font-bold uppercase tracking-wider">
+            Drop to Delete
+          </span>
         </div>
       )}
     </div>
@@ -512,7 +789,7 @@ function StickyNote({
     if (isEditing) return;
     e.preventDefault();
     e.stopPropagation();
-    
+
     const rect = e.currentTarget.getBoundingClientRect();
     const midPointX = rect.left + rect.width / 2;
     setDropIndicator(e.clientX < midPointX ? "left" : "right");
@@ -524,13 +801,13 @@ function StickyNote({
     const side = dropIndicator;
     setDropIndicator(null);
     onDragEnd();
-    
+
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
     try {
       const { noteId, oldWorkerId } = JSON.parse(rawData);
       if (noteId === id) return;
-      
+
       let newPos: number;
       if (side === "left") {
         newPos = prevPos !== null ? (prevPos + position) / 2 : position / 2;
@@ -620,7 +897,10 @@ function StickyNote({
               key={family.name}
               onClick={(e) => {
                 e.stopPropagation();
-                set(ref(db, `boarddata/${workerId}/notes/${id}/color`), family.name);
+                set(
+                  ref(db, `boarddata/${workerId}/notes/${id}/color`),
+                  family.name
+                );
               }}
               className={`w-3.5 h-3.5 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
             />
@@ -641,13 +921,137 @@ function StickyNote({
   );
 }
 
-// --- COLOR CONFIG ---
 const COLOR_MATRIX: Record<string, any> = {
-  Green: { name: "Green", shades: { 0: { bg: "bg-emerald-100", border: "border-emerald-400", text: "text-emerald-900" }, 1: { bg: "bg-emerald-300", border: "border-emerald-600", text: "text-emerald-950" }, 2: { bg: "bg-emerald-50/50", border: "border-emerald-200", text: "text-slate-400" } } },
-  Blue: { name: "Blue", shades: { 0: { bg: "bg-blue-100", border: "border-blue-400", text: "text-blue-900" }, 1: { bg: "bg-blue-300", border: "border-blue-600", text: "text-blue-950" }, 2: { bg: "bg-blue-50/50", border: "border-blue-200", text: "text-slate-400" } } },
-  Yellow: { name: "Yellow", shades: { 0: { bg: "bg-yellow-100", border: "border-yellow-400", text: "text-yellow-900" }, 1: { bg: "bg-yellow-300", border: "border-yellow-600", text: "text-yellow-950" }, 2: { bg: "bg-yellow-50/50", border: "border-yellow-200", text: "text-slate-400" } } },
-  Red: { name: "Red", shades: { 0: { bg: "bg-red-100", border: "border-red-400", text: "text-red-900" }, 1: { bg: "bg-red-300", border: "border-red-600", text: "text-red-950" }, 2: { bg: "bg-red-50/50", border: "border-red-200", text: "text-slate-400" } } },
-  Orange: { name: "Orange", shades: { 0: { bg: "bg-orange-100", border: "border-orange-400", text: "text-orange-900" }, 1: { bg: "bg-orange-300", border: "border-orange-600", text: "text-orange-950" }, 2: { bg: "bg-orange-50/50", border: "border-orange-200", text: "text-slate-400" } } },
-  Purple: { name: "Purple", shades: { 0: { bg: "bg-purple-100", border: "border-purple-400", text: "text-purple-900" }, 1: { bg: "bg-purple-300", border: "border-purple-600", text: "text-purple-950" }, 2: { bg: "bg-purple-50/50", border: "border-purple-200", text: "text-slate-400" } } },
-  Pink: { name: "Pink", shades: { 0: { bg: "bg-pink-100", border: "border-pink-400", text: "text-pink-900" }, 1: { bg: "bg-pink-300", border: "border-pink-600", text: "text-pink-950" }, 2: { bg: "bg-pink-50/50", border: "border-pink-200", text: "text-slate-400" } } },
+  Green: {
+    name: "Green",
+    shades: {
+      0: {
+        bg: "bg-emerald-100",
+        border: "border-emerald-400",
+        text: "text-emerald-900",
+      },
+      1: {
+        bg: "bg-emerald-300",
+        border: "border-emerald-600",
+        text: "text-emerald-950",
+      },
+      2: {
+        bg: "bg-emerald-50/50",
+        border: "border-emerald-200",
+        text: "text-slate-400",
+      },
+    },
+  },
+  Blue: {
+    name: "Blue",
+    shades: {
+      0: {
+        bg: "bg-blue-100",
+        border: "border-blue-400",
+        text: "text-blue-900",
+      },
+      1: {
+        bg: "bg-blue-300",
+        border: "border-blue-600",
+        text: "text-blue-950",
+      },
+      2: {
+        bg: "bg-blue-50/50",
+        border: "border-blue-200",
+        text: "text-slate-400",
+      },
+    },
+  },
+  Yellow: {
+    name: "Yellow",
+    shades: {
+      0: {
+        bg: "bg-yellow-100",
+        border: "border-yellow-400",
+        text: "text-yellow-900",
+      },
+      1: {
+        bg: "bg-yellow-300",
+        border: "border-yellow-600",
+        text: "text-yellow-950",
+      },
+      2: {
+        bg: "bg-yellow-50/50",
+        border: "border-yellow-200",
+        text: "text-slate-400",
+      },
+    },
+  },
+  Red: {
+    name: "Red",
+    shades: {
+      0: { bg: "bg-red-100", border: "border-red-400", text: "text-red-900" },
+      1: { bg: "bg-red-300", border: "border-red-600", text: "text-red-950" },
+      2: {
+        bg: "bg-red-50/50",
+        border: "border-red-200",
+        text: "text-slate-400",
+      },
+    },
+  },
+  Orange: {
+    name: "Orange",
+    shades: {
+      0: {
+        bg: "bg-orange-100",
+        border: "border-orange-400",
+        text: "text-orange-900",
+      },
+      1: {
+        bg: "bg-orange-300",
+        border: "border-orange-600",
+        text: "text-orange-950",
+      },
+      2: {
+        bg: "bg-orange-50/50",
+        border: "border-orange-200",
+        text: "text-slate-400",
+      },
+    },
+  },
+  Purple: {
+    name: "Purple",
+    shades: {
+      0: {
+        bg: "bg-purple-100",
+        border: "border-purple-400",
+        text: "text-purple-900",
+      },
+      1: {
+        bg: "bg-purple-300",
+        border: "border-purple-600",
+        text: "text-purple-950",
+      },
+      2: {
+        bg: "bg-purple-50/50",
+        border: "border-purple-200",
+        text: "text-slate-400",
+      },
+    },
+  },
+  Pink: {
+    name: "Pink",
+    shades: {
+      0: {
+        bg: "bg-pink-100",
+        border: "border-pink-400",
+        text: "text-pink-900",
+      },
+      1: {
+        bg: "bg-pink-300",
+        border: "border-pink-600",
+        text: "text-pink-950",
+      },
+      2: {
+        bg: "bg-pink-50/50",
+        border: "border-pink-200",
+        text: "text-slate-400",
+      },
+    },
+  },
 };
