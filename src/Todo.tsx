@@ -77,6 +77,10 @@ const db = getDatabase(app);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 
+// --- ASSETS ---
+// Dummy path for the bell sound. Replace this file in your public folder.
+const BELL_SOUND_URL = "/bell.mp3";
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [boardData, setBoardData] = useState<BoardData>({});
@@ -670,6 +674,14 @@ function DropZone({
     if (isNaN(newPosition)) {
       console.error("Attempted to set NaN position");
       return;
+    }
+
+    // Play sound if moving INTO Completed column (index 2)
+    // and the note wasn't already in the Completed column
+    if (colIndex === 2 && dragOrigin && dragOrigin.colIndex !== 2) {
+      new Audio(BELL_SOUND_URL)
+        .play()
+        .catch((e) => console.log("Audio play failed", e));
     }
 
     onValue(
