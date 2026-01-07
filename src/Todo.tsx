@@ -747,13 +747,13 @@ function DropZone({
       onDragEnter={() => setIsOver(true)}
       onDragLeave={() => setIsOver(false)}
       onDrop={handleContainerDrop}
-      className={`bg-slate-200/40 border-2 rounded-lg p-4 flex flex-col gap-4 transition-all relative group/zone min-h-[180px] h-full ${
+      className={`bg-slate-200/40 border-2 rounded-lg p-4 flex flex-col gap-4 transition-all relative group/zone min-h-[160px] h-full ${
         isOver
           ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
           : "border-dashed border-transparent"
       }`}
     >
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] auto-rows-min gap-4 flex-grow">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] auto-rows-min gap-4 flex-grow">
         {sortedNotes.map(([id, note], index) => (
           <StickyNote
             key={id}
@@ -1026,7 +1026,7 @@ function StickyNote({
         }}
         className={`${shade.bg} ${
           shade.border
-        } p-4 rotate-[-0.5deg] border-l-4 min-h-[180px] aspect-square flex flex-col transition-all group/note relative
+        } p-4 rotate-[-0.5deg] border-l-4 min-h-[160px] aspect-square flex flex-col transition-all group/note relative
           ${isDragging ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
           ${
             isEditing
@@ -1063,7 +1063,7 @@ function StickyNote({
         </div>
 
         {!isLockedByOther && (
-          <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/60 backdrop-blur-sm mx-4 py-1.5 rounded-full shadow-sm z-30 border border-white/50">
+          <div className="absolute m-[8px] bottom-2 left-0 right-0 flex items-center justify-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/60 backdrop-blur-sm py-1.5 rounded-full shadow-sm z-30 border border-white/50">
             {Object.values(COLOR_MATRIX).map((family) => (
               <button
                 key={family.name}
@@ -1076,7 +1076,7 @@ function StickyNote({
                   );
                   releaseLock();
                 }}
-                className={`w-3.5 h-3.5 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
+                className={`w-3 h-3 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
               />
             ))}
             <div className="w-px h-3 bg-black/10 mx-1" />
