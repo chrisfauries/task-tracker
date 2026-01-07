@@ -8,7 +8,9 @@ import {
   push,
   remove,
   update,
+  onDisconnect,
   DataSnapshot,
+  serverTimestamp,
 } from "firebase/database";
 import {
   getAuth,
@@ -38,8 +40,24 @@ interface Category {
   color?: string;
 }
 
+interface LockData {
+  userId: string;
+  userName: string;
+  timestamp: number;
+}
+
+interface PresenceData {
+  userId: string;
+  userName: string;
+  photoURL?: string;
+  lastActive: number;
+  online: boolean;
+}
+
 type BoardData = Record<string, WorkerData>;
 type CategoriesData = Record<string, Category>;
+type LocksData = Record<string, LockData>;
+type AllPresenceData = Record<string, PresenceData>;
 
 interface DragOrigin {
   workerId: string;
@@ -63,6 +81,8 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [boardData, setBoardData] = useState<BoardData>({});
   const [categories, setCategories] = useState<CategoriesData>({});
+  const [locks, setLocks] = useState<LocksData>({});
+  const [presence, setPresence] = useState<AllPresenceData>({});
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
   // Modal States
@@ -77,7 +97,25 @@ export default function App() {
   } | null>(null);
 
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (u) => setUser(u));
+    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      if (u) {
+        // Setup Presence on Login
+        const userStatusRef = ref(db, `/presence/${u.uid}`);
+
+        // Remove on disconnect
+        onDisconnect(userStatusRef).remove();
+
+        // Set initial status
+        set(userStatusRef, {
+          userId: u.uid,
+          userName: u.displayName || "Anonymous",
+          photoURL: u.photoURL || "",
+          online: true,
+          lastActive: serverTimestamp(),
+        });
+      }
+    });
 
     const boardRef = ref(db, "boarddata");
     const unsubscribeDb = onValue(boardRef, (snapshot: DataSnapshot) => {
@@ -91,6 +129,23 @@ export default function App() {
       setCategories(data || {});
     });
 
+    // Listen for locks
+    const locksRef = ref(db, "locks");
+    const unsubscribeLocks = onValue(locksRef, (snapshot: DataSnapshot) => {
+      const data = snapshot.val() as LocksData | null;
+      setLocks(data || {});
+    });
+
+    // Listen for presence (avatars)
+    const presenceRef = ref(db, "presence");
+    const unsubscribePresence = onValue(
+      presenceRef,
+      (snapshot: DataSnapshot) => {
+        const data = snapshot.val() as AllPresenceData | null;
+        setPresence(data || {});
+      }
+    );
+
     const handleGlobalDragEnd = () => setDragOrigin(null);
     window.addEventListener("dragend", handleGlobalDragEnd);
 
@@ -98,6 +153,8 @@ export default function App() {
       unsubscribeAuth();
       unsubscribeDb();
       unsubscribeCats();
+      unsubscribeLocks();
+      unsubscribePresence();
       window.removeEventListener("dragend", handleGlobalDragEnd);
     };
   }, []);
@@ -134,7 +191,6 @@ export default function App() {
 
     const workerNotes = boardData[workerId]?.notes || {};
 
-    // FIX: Filter out any non-numeric positions to prevent NaN errors
     const validPositions = Object.values(workerNotes)
       .filter(
         (n) =>
@@ -171,11 +227,38 @@ export default function App() {
     );
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden">
+    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative">
       <div className="p-4 border-b bg-white z-50 flex justify-between items-center shadow-sm">
         <h1 className="text-xl font-bold text-slate-700">Because Band Board</h1>
 
-        <div className="flex gap-3">
+        <div className="flex gap-3 items-center">
+          {/* Avatar List */}
+          <div className="flex -space-x-2 mr-4 border-r pr-4 border-slate-200">
+            {Object.values(presence)
+              .filter((p) => p.online)
+              .map((p) => (
+                <div
+                  key={p.userId}
+                  className="w-8 h-8 rounded-full border-2 border-white bg-slate-200 overflow-hidden relative title-tip"
+                  title={p.userName}
+                >
+                  {p.photoURL ? (
+                    <img
+                      src={p.photoURL}
+                      alt={p.userName}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-slate-500">
+                      {p.userName.charAt(0)}
+                    </div>
+                  )}
+                  {/* Online dot */}
+                  <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
+                </div>
+              ))}
+          </div>
+
           <button
             onClick={() => setIsCategoryDialogOpen(true)}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium transition shadow-sm"
@@ -245,6 +328,8 @@ export default function App() {
                     dragOrigin={dragOrigin}
                     onDragStart={(origin) => setDragOrigin(origin)}
                     onDragEnd={() => setDragOrigin(null)}
+                    locks={locks}
+                    currentUser={user}
                   />
                 </div>
               ))}
@@ -548,6 +633,8 @@ interface DropZoneProps {
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
   onDragEnd: () => void;
+  locks: LocksData;
+  currentUser: User | null;
 }
 
 function DropZone({
@@ -557,6 +644,8 @@ function DropZone({
   dragOrigin,
   onDragStart,
   onDragEnd,
+  locks,
+  currentUser,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
@@ -564,7 +653,6 @@ function DropZone({
   const isDraggingFromHere =
     dragOrigin?.workerId === workerId && dragOrigin?.colIndex === colIndex;
 
-  // FIX: Added numeric check in sort and filter to prevent NaN propagation
   const sortedNotes = Object.entries(notes)
     .filter(
       ([_, n]) =>
@@ -579,7 +667,6 @@ function DropZone({
     oldWorkerId: string,
     newPosition: number
   ) => {
-    // FIX: Block NaN updates early
     if (isNaN(newPosition)) {
       console.error("Attempted to set NaN position");
       return;
@@ -611,6 +698,7 @@ function DropZone({
     try {
       const { noteId, oldWorkerId } = JSON.parse(rawData);
       remove(ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`));
+      remove(ref(db, `locks/${noteId}`));
     } catch (err) {
       console.error(err);
     }
@@ -629,6 +717,7 @@ function DropZone({
           ? sortedNotes[sortedNotes.length - 1][1].position
           : 0;
       handleMove(noteId, oldWorkerId, lastPos + 1000);
+      remove(ref(db, `locks/${noteId}`));
     } catch (err) {
       console.error(err);
     }
@@ -685,6 +774,8 @@ function DropZone({
             onDragEnd={onDragEnd}
             isNew={id === autoEditId}
             onEditStarted={() => setAutoEditId(null)}
+            locks={locks}
+            currentUser={currentUser}
           />
         ))}
 
@@ -743,6 +834,8 @@ interface StickyNoteProps {
   onDragEnd: () => void;
   isNew?: boolean;
   onEditStarted?: () => void;
+  locks: LocksData;
+  currentUser: User | null;
 }
 
 function StickyNote({
@@ -759,6 +852,8 @@ function StickyNote({
   onDragEnd,
   isNew,
   onEditStarted,
+  locks,
+  currentUser,
 }: StickyNoteProps) {
   const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
     null
@@ -767,12 +862,64 @@ function StickyNote({
   const [isEditing, setIsEditing] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
 
+  // Check Lock Status
+  const lock = locks[id];
+  const now = Date.now();
+  const isLockValid = lock && now - lock.timestamp < 2 * 60 * 1000; // 2 minutes
+  const isLockedByOther = isLockValid && lock.userId !== currentUser?.uid;
+  const lockedByName = isLockedByOther ? lock.userName : null;
+
+  // Lock Management Actions
+  const acquireLock = async () => {
+    if (!currentUser) return false;
+    const lockRef = ref(db, `locks/${id}`);
+
+    // Optimistically assume we can lock
+    await set(lockRef, {
+      userId: currentUser.uid,
+      userName: currentUser.displayName || "Unknown",
+      timestamp: Date.now(),
+    });
+
+    onDisconnect(lockRef).remove();
+    return true;
+  };
+
+  const releaseLock = () => {
+    if (!currentUser) return;
+    remove(ref(db, `locks/${id}`));
+    onDisconnect(ref(db, `locks/${id}`)).cancel();
+  };
+
+  const renewLock = () => {
+    if (!currentUser) return;
+    update(ref(db, `locks/${id}`), { timestamp: Date.now() });
+  };
+
+  // Renew lock periodically while interacting
   useEffect(() => {
-    if (isNew && !isEditing) {
-      setIsEditing(true);
-      onEditStarted?.();
+    let interval: ReturnType<typeof setInterval>;
+    if ((isEditing || isDragging) && !isLockedByOther) {
+      interval = setInterval(renewLock, 60 * 1000); // Renew every 60s
     }
-  }, [isNew, isEditing, onEditStarted]);
+    return () => clearInterval(interval);
+  }, [isEditing, isDragging, isLockedByOther]);
+
+  // Clean up lock if component unmounts while editing
+  useEffect(() => {
+    return () => {
+      if (isEditing || isDragging) releaseLock();
+    };
+  }, [isEditing, isDragging]);
+
+  useEffect(() => {
+    if (isNew && !isEditing && !isLockedByOther) {
+      acquireLock().then(() => {
+        setIsEditing(true);
+        onEditStarted?.();
+      });
+    }
+  }, [isNew, isEditing, onEditStarted, isLockedByOther]);
 
   useEffect(() => {
     if (isEditing && textRef.current) {
@@ -786,7 +933,7 @@ function StickyNote({
   }, [isEditing]);
 
   const handleDragOver = (e: React.DragEvent) => {
-    if (isEditing) return;
+    if (isEditing || isLockedByOther) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -822,6 +969,7 @@ function StickyNote({
 
   const handleBlur = () => {
     setIsEditing(false);
+    releaseLock();
     if (textRef.current) {
       set(
         ref(db, `boarddata/${workerId}/notes/${id}/text`),
@@ -849,10 +997,21 @@ function StickyNote({
       )}
 
       <div
-        draggable={!isEditing}
-        onDoubleClick={() => setIsEditing(true)}
+        draggable={!isEditing && !isLockedByOther}
+        onDoubleClick={async () => {
+          if (isLockedByOther) return;
+          await acquireLock();
+          setIsEditing(true);
+        }}
         onDragStart={(e) => {
-          if (isEditing) return;
+          if (isEditing || isLockedByOther) {
+            e.preventDefault();
+            return;
+          }
+
+          // Fire and forget lock (do not await, must be sync)
+          acquireLock();
+
           e.dataTransfer.setData(
             "text/plain",
             JSON.stringify({ noteId: id, oldWorkerId: workerId })
@@ -863,18 +1022,30 @@ function StickyNote({
         onDragEnd={() => {
           setIsDragging(false);
           onDragEnd();
+          releaseLock();
         }}
         className={`${shade.bg} ${
           shade.border
-        } p-4 rotate-[-0.5deg] border-l-4 min-h-[180px] aspect-square flex flex-col transition-all group/note
+        } p-4 rotate-[-0.5deg] border-l-4 min-h-[180px] aspect-square flex flex-col transition-all group/note relative
           ${isDragging ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
           ${
             isEditing
               ? "ring-4 ring-cyan-400 shadow-2xl scale-[1.02] rotate-0 z-20 cursor-text"
+              : isLockedByOther
+              ? "cursor-not-allowed opacity-80"
               : "shadow-sm hover:shadow-md cursor-grab"
           }
         `}
       >
+        {isLockedByOther && (
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] z-40 flex flex-col items-center justify-center rounded-sm">
+            <span className="text-2xl mb-1">🔒</span>
+            <span className="text-white text-xs font-bold px-2 py-1 bg-black/50 rounded-full">
+              {lockedByName}
+            </span>
+          </div>
+        )}
+
         <div
           ref={textRef}
           contentEditable={isEditing}
@@ -891,31 +1062,36 @@ function StickyNote({
           {text}
         </div>
 
-        <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/60 backdrop-blur-sm mx-4 py-1.5 rounded-full shadow-sm z-30 border border-white/50">
-          {Object.values(COLOR_MATRIX).map((family) => (
+        {!isLockedByOther && (
+          <div className="absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/60 backdrop-blur-sm mx-4 py-1.5 rounded-full shadow-sm z-30 border border-white/50">
+            {Object.values(COLOR_MATRIX).map((family) => (
+              <button
+                key={family.name}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  await acquireLock();
+                  await set(
+                    ref(db, `boarddata/${workerId}/notes/${id}/color`),
+                    family.name
+                  );
+                  releaseLock();
+                }}
+                className={`w-3.5 h-3.5 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
+              />
+            ))}
+            <div className="w-px h-3 bg-black/10 mx-1" />
             <button
-              key={family.name}
-              onClick={(e) => {
+              onClick={async (e) => {
                 e.stopPropagation();
-                set(
-                  ref(db, `boarddata/${workerId}/notes/${id}/color`),
-                  family.name
-                );
+                if (isLockedByOther) return;
+                remove(ref(db, `boarddata/${workerId}/notes/${id}`));
               }}
-              className={`w-3.5 h-3.5 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
-            />
-          ))}
-          <div className="w-px h-3 bg-black/10 mx-1" />
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              remove(ref(db, `boarddata/${workerId}/notes/${id}`));
-            }}
-            className="text-[10px] text-slate-500 hover:text-red-600 font-bold px-1"
-          >
-            ✕
-          </button>
-        </div>
+              className="text-[10px] text-slate-500 hover:text-red-600 font-bold px-1"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
