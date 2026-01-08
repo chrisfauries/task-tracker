@@ -11,6 +11,9 @@ import {
   onDisconnect,
   DataSnapshot,
   serverTimestamp,
+  query,
+  limitToLast,
+  orderByChild,
 } from "firebase/database";
 import {
   getAuth,
@@ -54,10 +57,20 @@ interface PresenceData {
   online: boolean;
 }
 
+interface SavedSnapshot {
+  title: string;
+  timestamp: number;
+  boardData: BoardData;
+  categories: CategoriesData;
+  createdBy: string;
+  creatorId: string;
+}
+
 type BoardData = Record<string, WorkerData>;
 type CategoriesData = Record<string, Category>;
 type LocksData = Record<string, LockData>;
 type AllPresenceData = Record<string, PresenceData>;
+type SnapshotsData = Record<string, SavedSnapshot>;
 
 interface DragOrigin {
   workerId: string;
@@ -99,7 +112,9 @@ export default function App() {
   // Modal States
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [isImportExportDialogOpen, setIsImportExportDialogOpen] = useState(false);
+  const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
+    useState(false);
+  const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false);
   const [newWorkerName, setNewWorkerName] = useState("");
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -108,47 +123,127 @@ export default function App() {
     name: string;
   } | null>(null);
 
+  // Snapshot Refs
+  const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasLoggedLoginSnapshot = useRef(false);
+  const boardDataRef = useRef<BoardData>(boardData);
+  const categoriesRef = useRef<CategoriesData>(categories);
+
+  // Keep refs synced for snapshot functions to access latest state without deps
+  useEffect(() => {
+    boardDataRef.current = boardData;
+  }, [boardData]);
+  useEffect(() => {
+    categoriesRef.current = categories;
+  }, [categories]);
+
+  // --- SNAPSHOT LOGIC ---
+  const saveSnapshot = (reason: string) => {
+    if (!auth.currentUser) return;
+    const snapRef = ref(db, "snapshots");
+    const newSnap: SavedSnapshot = {
+      title: reason,
+      timestamp: Date.now(),
+      boardData: boardDataRef.current,
+      categories: categoriesRef.current,
+      createdBy: auth.currentUser.displayName || "Unknown",
+      creatorId: auth.currentUser.uid,
+    };
+    push(snapRef, newSnap);
+  };
+
+  const trackActivity = () => {
+    // Clear existing timer
+    if (inactivityTimerRef.current) {
+      clearTimeout(inactivityTimerRef.current);
+    }
+
+    // Set new timer for 1 minute (6,000 ms)
+    inactivityTimerRef.current = setTimeout(() => {
+      if (auth.currentUser) {
+        const timeStr = new Date().toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+        const dateStr = new Date().toLocaleDateString();
+        saveSnapshot(
+          `${auth.currentUser.displayName} made changes @ ${timeStr} on ${dateStr}`
+        );
+      }
+    }, 60000);
+  };
+
+  const handleLogout = async () => {
+    if (user) {
+      const timeStr = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const dateStr = new Date().toLocaleDateString();
+      // Force immediate snapshot before logout
+      await saveSnapshot(
+        `${user.displayName} logged out @ ${timeStr} on ${dateStr}`
+      );
+    }
+    signOut(auth);
+  };
+
+  // --- EFFECTS ---
+
+  // 1. Auth Listener
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
-      if (u) {
-        // Setup Presence on Login
-        const userStatusRef = ref(db, `/presence/${u.uid}`);
-
-        // Remove on disconnect
-        onDisconnect(userStatusRef).remove();
-
-        // Set initial status
-        set(userStatusRef, {
-          userId: u.uid,
-          userName: u.displayName || "Anonymous",
-          photoURL: u.photoURL || "",
-          online: true,
-          lastActive: serverTimestamp(),
-        });
+      if (!u) {
+        hasLoggedLoginSnapshot.current = false;
+        // Clean up local state on logout
+        setBoardData({});
+        setCategories({});
+        setLocks({});
+        setPresence({});
       }
     });
+    return () => unsubscribeAuth();
+  }, []);
 
+  // 2. Data Listeners - DEPENDENT ON USER
+  // This fixes BUG 1: Board empty on login. We wait for 'user' to exist before attaching listeners.
+  useEffect(() => {
+    if (!user) return;
+
+    // Setup Presence on Login
+    const userStatusRef = ref(db, `/presence/${user.uid}`);
+    onDisconnect(userStatusRef).remove();
+    set(userStatusRef, {
+      userId: user.uid,
+      userName: user.displayName || "Anonymous",
+      photoURL: user.photoURL || "",
+      online: true,
+      lastActive: serverTimestamp(),
+    });
+
+    // Board Data
     const boardRef = ref(db, "boarddata");
     const unsubscribeDb = onValue(boardRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val() as BoardData | null;
       setBoardData(data || {});
     });
 
+    // Categories
     const catRef = ref(db, "categories");
     const unsubscribeCats = onValue(catRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val() as CategoriesData | null;
       setCategories(data || {});
     });
 
-    // Listen for locks
+    // Locks
     const locksRef = ref(db, "locks");
     const unsubscribeLocks = onValue(locksRef, (snapshot: DataSnapshot) => {
       const data = snapshot.val() as LocksData | null;
       setLocks(data || {});
     });
 
-    // Listen for presence (avatars)
+    // Presence (Avatars)
     const presenceRef = ref(db, "presence");
     const unsubscribePresence = onValue(
       presenceRef,
@@ -161,20 +256,40 @@ export default function App() {
     const handleGlobalDragEnd = () => setDragOrigin(null);
     window.addEventListener("dragend", handleGlobalDragEnd);
 
+    // Cleanup listeners when user logs out or component unmounts
     return () => {
-      unsubscribeAuth();
       unsubscribeDb();
       unsubscribeCats();
       unsubscribeLocks();
       unsubscribePresence();
       window.removeEventListener("dragend", handleGlobalDragEnd);
+      if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
-  }, []);
+  }, [user]);
+
+  // Login Snapshot Trigger: Wait for User + Data + Categories
+  useEffect(() => {
+    if (
+      user &&
+      Object.keys(boardData).length > 0 &&
+      Object.keys(categories).length > 0 &&
+      !hasLoggedLoginSnapshot.current
+    ) {
+      const timeStr = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const dateStr = new Date().toLocaleDateString();
+      saveSnapshot(`${user.displayName} logged in @ ${timeStr} on ${dateStr}`);
+      hasLoggedLoginSnapshot.current = true;
+    }
+  }, [user, boardData, categories]);
 
   const handleAddWorker = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWorkerName.trim()) return;
 
+    trackActivity(); // Track change
     const workersRef = ref(db, "boarddata");
     push(workersRef, {
       name: newWorkerName,
@@ -187,6 +302,7 @@ export default function App() {
 
   const confirmDeleteWorker = () => {
     if (workerToDelete) {
+      trackActivity(); // Track change
       remove(ref(db, `boarddata/${workerToDelete.id}`));
       setIsDeleteDialogOpen(false);
       setWorkerToDelete(null);
@@ -201,8 +317,8 @@ export default function App() {
     const category = categories[catId];
     if (!category || !category.items) return;
 
+    trackActivity(); // Track change
     const workerNotes = boardData[workerId]?.notes || {};
-
     const validPositions = Object.values(workerNotes)
       .filter(
         (n) =>
@@ -211,7 +327,6 @@ export default function App() {
           !isNaN(n.position)
       )
       .map((n) => n.position);
-
     const lastPos = validPositions.length > 0 ? Math.max(...validPositions) : 0;
 
     category.items.forEach((text, index) => {
@@ -234,7 +349,9 @@ export default function App() {
       categories,
     };
 
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
+    const dataStr =
+      "data:text/json;charset=utf-8," +
+      encodeURIComponent(JSON.stringify(backup, null, 2));
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
     downloadAnchorNode.setAttribute(
@@ -251,24 +368,18 @@ export default function App() {
     reader.onload = async (e) => {
       try {
         const json = JSON.parse(e.target?.result as string) as BackupData;
-        
-        // Basic validation
         if (!json.boardData && !json.categories) {
           alert("Invalid backup file: Missing board data.");
           return;
         }
-
-        // Update DB
-        // We set these independently to ensure we don't accidentally wipe 'presence' or 'locks'
-        // if we were to set the root object.
+        trackActivity(); // Track change (massive change)
         await set(ref(db, "boarddata"), json.boardData || {});
         await set(ref(db, "categories"), json.categories || {});
-        
         setIsImportExportDialogOpen(false);
         alert("Board restored successfully!");
       } catch (err) {
         console.error(err);
-        alert("Failed to parse backup file. Please ensure it is a valid JSON file exported from this app.");
+        alert("Failed to parse backup file.");
       }
     };
     reader.readAsText(file);
@@ -314,12 +425,17 @@ export default function App() {
                       {p.userName.charAt(0)}
                     </div>
                   )}
-                  {/* Online dot */}
                   <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white rounded-full"></div>
                 </div>
               ))}
           </div>
-          
+
+          <button
+            onClick={() => setIsSnapshotDialogOpen(true)}
+            className="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-300 rounded-md hover:bg-slate-200 text-sm font-medium transition shadow-sm flex items-center gap-2"
+          >
+            <span>⏱️</span> Snapshots
+          </button>
           <button
             onClick={() => setIsImportExportDialogOpen(true)}
             className="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-300 rounded-md hover:bg-slate-200 text-sm font-medium transition shadow-sm"
@@ -339,7 +455,7 @@ export default function App() {
             Add Worker
           </button>
           <button
-            onClick={() => signOut(auth)}
+            onClick={handleLogout}
             className="px-4 py-2 bg-slate-200 text-slate-700 rounded-md hover:bg-slate-300 text-sm font-medium transition"
           >
             Logout
@@ -397,6 +513,7 @@ export default function App() {
                     onDragEnd={() => setDragOrigin(null)}
                     locks={locks}
                     currentUser={user}
+                    onActivity={trackActivity}
                   />
                 </div>
               ))}
@@ -413,13 +530,17 @@ export default function App() {
           onApply={handleApplyCategory}
         />
       )}
-      
+
       {isImportExportDialogOpen && (
         <ImportExportDialog
           onClose={() => setIsImportExportDialogOpen(false)}
           onExport={handleExport}
           onImport={handleImport}
         />
+      )}
+
+      {isSnapshotDialogOpen && (
+        <SnapshotDialog onClose={() => setIsSnapshotDialogOpen(false)} />
       )}
 
       {isWorkerDialogOpen && (
@@ -493,13 +614,189 @@ export default function App() {
 
 // --- SUBCOMPONENTS ---
 
+interface SnapshotDialogProps {
+  onClose: () => void;
+}
+
+function SnapshotDialog({ onClose }: SnapshotDialogProps) {
+  // Fix BUG 2: Snapshots are fetched only when this component mounts
+  const [snapshots, setSnapshots] = useState<SnapshotsData>({});
+  const [loading, setLoading] = useState(true);
+  const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const snapshotsRef = query(
+      ref(db, "snapshots"),
+      orderByChild("timestamp"),
+      limitToLast(50)
+    );
+
+    const unsubscribe = onValue(snapshotsRef, (snapshot) => {
+      const data = snapshot.val() as SnapshotsData | null;
+      setSnapshots(data || {});
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Convert to array and sort Newest -> Oldest
+  const sortedSnapshots = Object.entries(snapshots).sort(
+    (a, b) => b[1].timestamp - a[1].timestamp
+  );
+
+  const handleRestore = async (snap: SavedSnapshot) => {
+    try {
+      await set(ref(db, "boarddata"), snap.boardData || {});
+      await set(ref(db, "categories"), snap.categories || {});
+      alert("Board restored successfully!");
+      setConfirmRestoreId(null);
+      onClose();
+    } catch (e) {
+      console.error(e);
+      alert("Error restoring snapshot.");
+    }
+  };
+
+  const handleDelete = async (key: string) => {
+    try {
+      await remove(ref(db, `snapshots/${key}`));
+      setConfirmDeleteId(null);
+    } catch (e) {
+      console.error(e);
+      alert("Error deleting snapshot.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
+        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+              <span>⏱️</span> Version History
+            </h2>
+            <p className="text-slate-500 text-sm mt-1">
+              Auto-saved snapshots of the board state.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 text-2xl"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+          {loading ? (
+            <div className="text-center py-12 text-slate-400 italic">
+              Loading snapshots...
+            </div>
+          ) : sortedSnapshots.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 italic">
+              No snapshots available yet.
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedSnapshots.map(([key, snap]) => (
+                <div
+                  key={key}
+                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-bold text-slate-800 text-lg">
+                        {snap.title}
+                      </h3>
+                      <div className="text-xs text-slate-400 mt-1">
+                        {new Date(snap.timestamp).toLocaleString()} • by{" "}
+                        {snap.createdBy}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                      {confirmRestoreId === key ? (
+                        <div className="flex items-center gap-2 animate-in slide-in-from-right-2">
+                          <span className="text-xs font-bold text-red-600 uppercase">
+                            Sure?
+                          </span>
+                          <button
+                            onClick={() => handleRestore(snap)}
+                            className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700"
+                          >
+                            Yes, Restore
+                          </button>
+                          <button
+                            onClick={() => setConfirmRestoreId(null)}
+                            className="bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setConfirmDeleteId(null);
+                            setConfirmRestoreId(key);
+                          }}
+                          className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-indigo-100 transition"
+                        >
+                          Restore
+                        </button>
+                      )}
+
+                      {confirmDeleteId === key ? (
+                        <div className="flex items-center gap-2 animate-in slide-in-from-right-2">
+                          <button
+                            onClick={() => handleDelete(key)}
+                            className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black"
+                          >
+                            Confirm Delete
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            className="bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300"
+                          >
+                            X
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setConfirmRestoreId(null);
+                            setConfirmDeleteId(key);
+                          }}
+                          className="p-2 text-slate-300 hover:text-red-500 transition"
+                          title="Delete Snapshot"
+                        >
+                          🗑️
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface ImportExportDialogProps {
   onClose: () => void;
   onExport: () => void;
   onImport: (file: File) => void;
 }
 
-function ImportExportDialog({ onClose, onExport, onImport }: ImportExportDialogProps) {
+function ImportExportDialog({
+  onClose,
+  onExport,
+  onImport,
+}: ImportExportDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmingImport, setConfirmingImport] = useState<File | null>(null);
 
@@ -521,7 +818,7 @@ function ImportExportDialog({ onClose, onExport, onImport }: ImportExportDialogP
             ✕
           </button>
         </div>
-        
+
         <div className="p-6 space-y-6">
           {/* EXPORT SECTION */}
           <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
@@ -529,7 +826,8 @@ function ImportExportDialog({ onClose, onExport, onImport }: ImportExportDialogP
               <span className="text-xl">💾</span> Export Backup
             </h3>
             <p className="text-sm text-blue-600 mb-4">
-              Download a copy of the entire board state (Notes, Categories, and Rows) to your computer as a JSON file.
+              Download a copy of the entire board state (Notes, Categories, and
+              Rows) to your computer as a JSON file.
             </p>
             <button
               onClick={onExport}
@@ -548,9 +846,10 @@ function ImportExportDialog({ onClose, onExport, onImport }: ImportExportDialogP
                 <span className="text-xl">📂</span> Import Backup
               </h3>
               <p className="text-sm text-amber-700 mb-4">
-                Restore the board from a previously saved JSON file. 
-                <br/>
-                <span className="font-bold">Warning:</span> This will completely overwrite the current board.
+                Restore the board from a previously saved JSON file.
+                <br />
+                <span className="font-bold">Warning:</span> This will completely
+                overwrite the current board.
               </p>
               <input
                 type="file"
@@ -568,23 +867,31 @@ function ImportExportDialog({ onClose, onExport, onImport }: ImportExportDialogP
             </div>
           ) : (
             <div className="bg-red-50 border border-red-200 p-4 rounded-xl text-center">
-              <h3 className="font-bold text-red-800 mb-2 text-lg">⚠️ Are you sure?</h3>
+              <h3 className="font-bold text-red-800 mb-2 text-lg">
+                ⚠️ Are you sure?
+              </h3>
               <p className="text-sm text-red-600 mb-6">
-                You are about to overwrite the entire board with data from <span className="font-bold font-mono bg-red-100 px-1 rounded">{confirmingImport.name}</span>.
-                <br/><br/>
-                This action <span className="font-bold underline">cannot be undone</span>.
+                You are about to overwrite the entire board with data from{" "}
+                <span className="font-bold font-mono bg-red-100 px-1 rounded">
+                  {confirmingImport.name}
+                </span>
+                .
+                <br />
+                <br />
+                This action{" "}
+                <span className="font-bold underline">cannot be undone</span>.
               </p>
               <div className="flex gap-3">
-                <button 
+                <button
                   onClick={() => {
                     setConfirmingImport(null);
-                    if(fileInputRef.current) fileInputRef.current.value = "";
+                    if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
                   className="flex-1 py-2 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   onClick={() => onImport(confirmingImport)}
                   className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-md"
                 >
@@ -818,6 +1125,7 @@ interface DropZoneProps {
   onDragEnd: () => void;
   locks: LocksData;
   currentUser: User | null;
+  onActivity: () => void;
 }
 
 function DropZone({
@@ -829,6 +1137,7 @@ function DropZone({
   onDragEnd,
   locks,
   currentUser,
+  onActivity,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
@@ -854,6 +1163,8 @@ function DropZone({
       console.error("Attempted to set NaN position");
       return;
     }
+
+    onActivity(); // Track change
 
     // Play sound if moving INTO Completed column (index 2)
     // and the note wasn't already in the Completed column
@@ -888,6 +1199,7 @@ function DropZone({
     if (!rawData) return;
     try {
       const { noteId, oldWorkerId } = JSON.parse(rawData);
+      onActivity(); // Track change
       remove(ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`));
       remove(ref(db, `locks/${noteId}`));
     } catch (err) {
@@ -915,6 +1227,7 @@ function DropZone({
   };
 
   const addNote = () => {
+    onActivity(); // Track change
     const lastPos =
       sortedNotes.length > 0
         ? sortedNotes[sortedNotes.length - 1][1].position
@@ -967,6 +1280,7 @@ function DropZone({
             onEditStarted={() => setAutoEditId(null)}
             locks={locks}
             currentUser={currentUser}
+            onActivity={onActivity}
           />
         ))}
 
@@ -1027,6 +1341,7 @@ interface StickyNoteProps {
   onEditStarted?: () => void;
   locks: LocksData;
   currentUser: User | null;
+  onActivity: () => void;
 }
 
 function StickyNote({
@@ -1045,6 +1360,7 @@ function StickyNote({
   onEditStarted,
   locks,
   currentUser,
+  onActivity,
 }: StickyNoteProps) {
   const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
     null
@@ -1159,6 +1475,9 @@ function StickyNote({
   };
 
   const handleBlur = () => {
+    if (isEditing) {
+      onActivity(); // Track change
+    }
     setIsEditing(false);
     releaseLock();
     if (textRef.current) {
@@ -1260,6 +1579,7 @@ function StickyNote({
                 key={family.name}
                 onClick={async (e) => {
                   e.stopPropagation();
+                  onActivity(); // Track change
                   await acquireLock();
                   await set(
                     ref(db, `boarddata/${workerId}/notes/${id}/color`),
@@ -1275,6 +1595,7 @@ function StickyNote({
               onClick={async (e) => {
                 e.stopPropagation();
                 if (isLockedByOther) return;
+                onActivity(); // Track change
                 remove(ref(db, `boarddata/${workerId}/notes/${id}`));
               }}
               className="text-[10px] text-slate-500 hover:text-red-600 font-bold px-1"
