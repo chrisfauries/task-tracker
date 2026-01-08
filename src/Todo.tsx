@@ -32,6 +32,7 @@ interface Note {
   column: number;
   color?: string;
   position: number;
+  categoryName?: string;
 }
 
 interface WorkerData {
@@ -161,7 +162,7 @@ export default function App() {
   const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
     useState(false);
   const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false);
-  
+
   // Add Worker State
   const [newWorkerName, setNewWorkerName] = useState("");
   const [newWorkerColor, setNewWorkerColor] = useState("Green");
@@ -178,6 +179,18 @@ export default function App() {
     name: string;
   } | null>(null);
 
+  // Context Menu State
+  const [contextMenuPos, setContextMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [targetNote, setTargetNote] = useState<{
+    id: string;
+    workerId: string;
+    text: string;
+  } | null>(null);
+  const [isAddToCatDialogOpen, setIsAddToCatDialogOpen] = useState(false);
+
   // Snapshot Refs
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoggedLoginSnapshot = useRef(false);
@@ -191,6 +204,13 @@ export default function App() {
   useEffect(() => {
     categoriesRef.current = categories;
   }, [categories]);
+
+  // Global click listener to close context menu
+  useEffect(() => {
+    const handleClick = () => setContextMenuPos(null);
+    window.addEventListener("click", handleClick);
+    return () => window.removeEventListener("click", handleClick);
+  }, []);
 
   // --- UNDO / REDO LOGIC ---
   const registerHistory = (action: HistoryAction) => {
@@ -509,9 +529,9 @@ export default function App() {
 
     trackActivity();
     const workerRef = ref(db, `boarddata/${editingWorkerId}`);
-    update(workerRef, { 
+    update(workerRef, {
       name: editWorkerName,
-      defaultColor: editWorkerColor
+      defaultColor: editWorkerColor,
     });
 
     setIsEditWorkerDialogOpen(false);
@@ -556,8 +576,45 @@ export default function App() {
         column: colIndex,
         color: category.color || "Green",
         position: lastPos + 1000 + index * 10,
+        categoryName: category.name,
       });
     });
+  };
+
+  // --- CONTEXT MENU LOGIC ---
+  const handleNoteContextMenu = (
+    e: React.MouseEvent,
+    noteId: string,
+    workerId: string,
+    text: string
+  ) => {
+    e.preventDefault(); // Prevent default browser context menu
+    setTargetNote({ id: noteId, workerId, text });
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
+  };
+
+  const handleAssignCategory = (catId: string) => {
+    if (!targetNote) return;
+
+    const category = categories[catId];
+    if (!category) return;
+
+    trackActivity();
+
+    // 1. Update Note with Category Name
+    update(ref(db, `boarddata/${targetNote.workerId}/notes/${targetNote.id}`), {
+      categoryName: category.name,
+    });
+
+    // 2. Add Note Text to Category Items
+    const currentItems = category.items || [];
+    const newItems = [...currentItems, targetNote.text];
+    update(ref(db, `categories/${catId}`), {
+      items: newItems,
+    });
+
+    setIsAddToCatDialogOpen(false);
+    setTargetNote(null);
   };
 
   // --- IMPORT / EXPORT LOGIC ---
@@ -626,6 +683,25 @@ export default function App() {
       className="h-screen flex flex-col bg-slate-50 overflow-hidden relative"
       style={{ fontFamily: "Georgia, serif" }}
     >
+      {/* Context Menu */}
+      {contextMenuPos && (
+        <div
+          style={{ top: contextMenuPos.y, left: contextMenuPos.x }}
+          className="fixed bg-white shadow-xl border border-slate-200 rounded-lg py-1 z-[100] min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setContextMenuPos(null);
+              setIsAddToCatDialogOpen(true);
+            }}
+            className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700"
+          >
+            Add to category...
+          </button>
+        </div>
+      )}
+
       {/* HEADER BANNER - Updated to Grid for centering */}
       <div className="p-4 border-b bg-white z-50 grid grid-cols-3 items-center shadow-sm">
         {/* Left: Title + Logo */}
@@ -811,6 +887,7 @@ export default function App() {
                     dragOrigin={dragOrigin}
                     onDragStart={(origin) => setDragOrigin(origin)}
                     onDragEnd={() => setDragOrigin(null)}
+                    onNoteContextMenu={handleNoteContextMenu}
                     locks={locks}
                     currentUser={user}
                     onActivity={trackActivity}
@@ -822,6 +899,14 @@ export default function App() {
           ))}
         </div>
       </div>
+
+      {isAddToCatDialogOpen && (
+        <AddToCategoryDialog
+          categories={categories}
+          onClose={() => setIsAddToCatDialogOpen(false)}
+          onSelect={handleAssignCategory}
+        />
+      )}
 
       {isCategoryDialogOpen && (
         <CategoryDialog
@@ -859,7 +944,7 @@ export default function App() {
                 value={newWorkerName}
                 onChange={(e) => setNewWorkerName(e.target.value)}
               />
-              
+
               <div className="flex flex-col gap-2 mb-6">
                 <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                   Default Note Color
@@ -995,6 +1080,60 @@ export default function App() {
 }
 
 // --- SUBCOMPONENTS ---
+
+interface AddToCategoryDialogProps {
+  categories: CategoriesData;
+  onClose: () => void;
+  onSelect: (catId: string) => void;
+}
+
+function AddToCategoryDialog({
+  categories,
+  onClose,
+  onSelect,
+}: AddToCategoryDialogProps) {
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200 overflow-hidden flex flex-col max-h-[80vh]">
+        <div className="p-4 border-b flex justify-between items-center bg-slate-50">
+          <h2 className="text-lg font-bold text-slate-800">
+            Add to Category...
+          </h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 text-xl"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="p-4 overflow-y-auto flex-1">
+          {Object.keys(categories).length === 0 ? (
+            <p className="text-slate-500 text-center italic">
+              No categories available.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-2">
+              {Object.entries(categories).map(([id, cat]) => (
+                <button
+                  key={id}
+                  onClick={() => onSelect(id)}
+                  className="flex items-center gap-3 w-full p-3 rounded-lg border hover:bg-slate-50 transition text-left"
+                >
+                  <div
+                    className={`w-4 h-4 rounded-full ${
+                      COLOR_MATRIX[cat.color || "Green"].shades[1].bg
+                    }`}
+                  />
+                  <span className="font-medium text-slate-700">{cat.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface SnapshotDialogProps {
   onClose: () => void;
@@ -1636,6 +1775,12 @@ interface DropZoneProps {
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
+  onNoteContextMenu: (
+    e: React.MouseEvent,
+    noteId: string,
+    workerId: string,
+    text: string
+  ) => void;
 }
 
 function DropZone({
@@ -1650,6 +1795,7 @@ function DropZone({
   currentUser,
   onActivity,
   onHistory,
+  onNoteContextMenu,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
@@ -1818,6 +1964,7 @@ function DropZone({
             text={note.text}
             color={note.color}
             column={colIndex}
+            categoryName={note.categoryName}
             workerId={workerId}
             position={note.position}
             prevPos={index > 0 ? sortedNotes[index - 1][1].position : null}
@@ -1835,6 +1982,7 @@ function DropZone({
             currentUser={currentUser}
             onActivity={onActivity}
             onHistory={onHistory}
+            onContextMenu={onNoteContextMenu}
           />
         ))}
 
@@ -1886,6 +2034,7 @@ interface StickyNoteProps {
   color?: string;
   column: number;
   position: number;
+  categoryName?: string;
   prevPos: number | null;
   nextPos: number | null;
   onReorder: (
@@ -1903,6 +2052,12 @@ interface StickyNoteProps {
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
+  onContextMenu: (
+    e: React.MouseEvent,
+    noteId: string,
+    workerId: string,
+    text: string
+  ) => void;
 }
 
 function StickyNote({
@@ -1910,6 +2065,7 @@ function StickyNote({
   text,
   color,
   column,
+  categoryName,
   workerId,
   position,
   prevPos,
@@ -1923,6 +2079,7 @@ function StickyNote({
   currentUser,
   onActivity,
   onHistory,
+  onContextMenu,
 }: StickyNoteProps) {
   const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
     null
@@ -2115,6 +2272,11 @@ function StickyNote({
           onDragEnd();
           releaseLock();
         }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onContextMenu?.(e, id, workerId, text);
+        }}
         className={`${shade.bg} ${
           shade.border
         } p-4 rotate-[-0.5deg] border-l-4 min-h-[160px] aspect-square flex flex-col transition-all group/note relative
@@ -2152,6 +2314,15 @@ function StickyNote({
         >
           {text}
         </div>
+
+        {/* Category Name Display */}
+        {categoryName && (
+          <div
+            className={`absolute bottom-2 right-2 text-[10px] italic opacity-60 pointer-events-none select-none max-w-[80%] truncate ${shade.text}`}
+          >
+            {categoryName}
+          </div>
+        )}
 
         {!isLockedByOther && (
           <div className="absolute m-[8px] bottom-2 left-0 right-0 flex items-center justify-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/60 backdrop-blur-sm py-1.5 rounded-full shadow-sm z-30 border border-white/50">
