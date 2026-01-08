@@ -162,6 +162,11 @@ export default function App() {
   const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false);
   const [newWorkerName, setNewWorkerName] = useState("");
 
+  // Worker Edit State
+  const [isEditWorkerDialogOpen, setIsEditWorkerDialogOpen] = useState(false);
+  const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null);
+  const [editWorkerName, setEditWorkerName] = useState("");
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [workerToDelete, setWorkerToDelete] = useState<{
     id: string;
@@ -484,6 +489,25 @@ export default function App() {
     setIsWorkerDialogOpen(false);
   };
 
+  const handleEditWorkerStart = (id: string, currentName: string) => {
+    setEditingWorkerId(id);
+    setEditWorkerName(currentName);
+    setIsEditWorkerDialogOpen(true);
+  };
+
+  const handleEditWorkerSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editWorkerName.trim() || !editingWorkerId) return;
+
+    trackActivity();
+    const workerRef = ref(db, `boarddata/${editingWorkerId}`);
+    update(workerRef, { name: editWorkerName });
+
+    setIsEditWorkerDialogOpen(false);
+    setEditingWorkerId(null);
+    setEditWorkerName("");
+  };
+
   const confirmDeleteWorker = () => {
     if (workerToDelete) {
       trackActivity(); // Track change
@@ -721,9 +745,16 @@ export default function App() {
           {Object.entries(boardData).map(([workerId, worker]) => (
             <div key={workerId} className="flex mb-8 min-h-[250px]">
               <div className="sticky left-0 bg-slate-50 z-30 pl-8 pr-4 flex-none w-24">
-                <div className="bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-md h-full group relative overflow-hidden">
+                <div
+                  className="bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-md h-full group relative overflow-hidden cursor-pointer hover:bg-slate-50 transition-colors"
+                  onDoubleClick={() =>
+                    handleEditWorkerStart(workerId, worker.name)
+                  }
+                  title="Double click to edit name"
+                >
                   <button
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
                       setWorkerToDelete({ id: workerId, name: worker.name });
                       setIsDeleteDialogOpen(true);
                     }}
@@ -813,6 +844,41 @@ export default function App() {
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
                 >
                   Add to Board
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isEditWorkerDialogOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
+            <h2 className="text-xl font-bold text-slate-800 mb-4">
+              Edit Worker Name
+            </h2>
+            <form onSubmit={handleEditWorkerSave}>
+              <input
+                autoFocus
+                type="text"
+                placeholder="Worker or Student Name"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-6"
+                value={editWorkerName}
+                onChange={(e) => setEditWorkerName(e.target.value)}
+              />
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditWorkerDialogOpen(false)}
+                  className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+                >
+                  Save Changes
                 </button>
               </div>
             </form>
