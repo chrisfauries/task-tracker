@@ -8,6 +8,8 @@ import {
   push,
   remove,
   update,
+  get,
+  child,
   onDisconnect,
   DataSnapshot,
   serverTimestamp,
@@ -66,6 +68,45 @@ interface SavedSnapshot {
   creatorId: string;
 }
 
+// --- HISTORY TYPES ---
+type HistoryAction =
+  | {
+      type: "MOVE";
+      noteId: string;
+      prevWorkerId: string;
+      prevCol: number;
+      prevPos: number;
+      newWorkerId: string;
+      newCol: number;
+      newPos: number;
+    }
+  | {
+      type: "ADD";
+      noteId: string;
+      workerId: string;
+      noteData: Note;
+    }
+  | {
+      type: "DELETE";
+      noteId: string;
+      workerId: string;
+      noteData: Note;
+    }
+  | {
+      type: "EDIT_TEXT";
+      noteId: string;
+      workerId: string;
+      prevText: string;
+      newText: string;
+    }
+  | {
+      type: "EDIT_COLOR";
+      noteId: string;
+      workerId: string;
+      prevColor: string;
+      newColor: string;
+    };
+
 type BoardData = Record<string, WorkerData>;
 type CategoriesData = Record<string, Category>;
 type LocksData = Record<string, LockData>;
@@ -109,6 +150,10 @@ export default function App() {
   const [presence, setPresence] = useState<AllPresenceData>({});
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
+  // Undo/Redo State
+  const [history, setHistory] = useState<HistoryAction[]>([]);
+  const [future, setFuture] = useState<HistoryAction[]>([]);
+
   // Modal States
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
@@ -137,6 +182,143 @@ export default function App() {
     categoriesRef.current = categories;
   }, [categories]);
 
+  // --- UNDO / REDO LOGIC ---
+  const registerHistory = (action: HistoryAction) => {
+    setHistory((prev) => [...prev, action]);
+    setFuture([]); // Clear redo stack on new action
+    trackActivity();
+  };
+
+  const handleUndo = async () => {
+    if (history.length === 0) return;
+    const action = history[history.length - 1];
+    setHistory((prev) => prev.slice(0, -1));
+    setFuture((prev) => [...prev, action]);
+    trackActivity();
+
+    // Perform Inverse Operation
+    switch (action.type) {
+      case "MOVE":
+        // Inverse: Move back to prevWorker, prevCol, prevPos
+
+        // FIX: Fetch first BEFORE removing.
+        const snapMove = await get(
+          ref(db, `boarddata/${action.newWorkerId}/notes/${action.noteId}`)
+        );
+
+        if (snapMove.exists()) {
+          const noteVal = snapMove.val();
+
+          // Restore to previous location
+          await set(
+            ref(db, `boarddata/${action.prevWorkerId}/notes/${action.noteId}`),
+            {
+              ...noteVal,
+              column: action.prevCol,
+              position: action.prevPos,
+            }
+          );
+
+          // FIX: Only remove from new location if it is DIFFERENT from old location.
+          // If they are the same (same worker), the set() above acted as an update,
+          // and a remove() here would delete the note we just restored.
+          if (action.newWorkerId !== action.prevWorkerId) {
+            await remove(
+              ref(db, `boarddata/${action.newWorkerId}/notes/${action.noteId}`)
+            );
+          }
+        }
+        break;
+      case "ADD":
+        // Inverse: Delete the note
+        await remove(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`)
+        );
+        break;
+      case "DELETE":
+        // Inverse: Restore the note
+        await set(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`),
+          action.noteData
+        );
+        break;
+      case "EDIT_TEXT":
+        // Inverse: Set text back to old
+        await set(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/text`),
+          action.prevText
+        );
+        break;
+      case "EDIT_COLOR":
+        // Inverse: Set color back to old
+        await set(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/color`),
+          action.prevColor
+        );
+        break;
+    }
+  };
+
+  const handleRedo = async () => {
+    if (future.length === 0) return;
+    const action = future[future.length - 1];
+    setFuture((prev) => prev.slice(0, -1));
+    setHistory((prev) => [...prev, action]);
+    trackActivity();
+
+    // Perform Original Operation
+    switch (action.type) {
+      case "MOVE":
+        const snapMove = await get(
+          ref(db, `boarddata/${action.prevWorkerId}/notes/${action.noteId}`)
+        );
+        if (snapMove.exists()) {
+          const noteVal = snapMove.val();
+
+          // Move to new location
+          await set(
+            ref(db, `boarddata/${action.newWorkerId}/notes/${action.noteId}`),
+            {
+              ...noteVal,
+              column: action.newCol,
+              position: action.newPos,
+            }
+          );
+
+          // FIX: Only remove from old location if different
+          if (action.prevWorkerId !== action.newWorkerId) {
+            await remove(
+              ref(db, `boarddata/${action.prevWorkerId}/notes/${action.noteId}`)
+            );
+          }
+        }
+        break;
+      case "ADD":
+        await set(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`),
+          action.noteData
+        );
+        break;
+      case "DELETE":
+        await remove(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`)
+        );
+        break;
+      case "EDIT_TEXT":
+        await set(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/text`),
+          action.newText
+        );
+        break;
+      case "EDIT_COLOR":
+        await set(
+          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/color`),
+          action.newColor
+        );
+        break;
+    }
+  };
+
   // --- SNAPSHOT LOGIC ---
   const saveSnapshot = (reason: string) => {
     if (!auth.currentUser) return;
@@ -158,7 +340,7 @@ export default function App() {
       clearTimeout(inactivityTimerRef.current);
     }
 
-    // Set new timer for 1 minute (6,000 ms)
+    // Set new timer for 5 minutes (300,000 ms)
     inactivityTimerRef.current = setTimeout(() => {
       if (auth.currentUser) {
         const timeStr = new Date().toLocaleTimeString([], {
@@ -170,7 +352,7 @@ export default function App() {
           `${auth.currentUser.displayName} made changes @ ${timeStr} on ${dateStr}`
         );
       }
-    }, 60000);
+    }, 60000 * 5); // 5 minutes
   };
 
   const handleLogout = async () => {
@@ -201,6 +383,8 @@ export default function App() {
         setCategories({});
         setLocks({});
         setPresence({});
+        setHistory([]);
+        setFuture([]);
       }
     });
     return () => unsubscribeAuth();
@@ -400,10 +584,67 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative">
-      <div className="p-4 border-b bg-white z-50 flex justify-between items-center shadow-sm">
+      {/* HEADER BANNER - Updated to Grid for centering */}
+      <div className="p-4 border-b bg-white z-50 grid grid-cols-3 items-center shadow-sm">
+        {/* Left: Title */}
         <h1 className="text-xl font-bold text-slate-700">Because Band Board</h1>
 
-        <div className="flex gap-3 items-center">
+        {/* Center: Undo/Redo */}
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={handleUndo}
+            disabled={history.length === 0}
+            className={`p-2 rounded-lg transition-all border ${
+              history.length === 0
+                ? "text-slate-300 border-transparent cursor-not-allowed"
+                : "text-slate-600 border-slate-200 hover:bg-slate-100 hover:shadow-sm"
+            }`}
+            title="Undo"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M3 7v6h6" />
+              <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+            </svg>
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={future.length === 0}
+            className={`p-2 rounded-lg transition-all border ${
+              future.length === 0
+                ? "text-slate-300 border-transparent cursor-not-allowed"
+                : "text-slate-600 border-slate-200 hover:bg-slate-100 hover:shadow-sm"
+            }`}
+            title="Redo"
+          >
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 7v6h-6" />
+              <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Right: Buttons */}
+        <div className="flex gap-3 items-center justify-end">
           {/* Avatar List */}
           <div className="flex -space-x-2 mr-4 border-r pr-4 border-slate-200">
             {Object.values(presence)
@@ -514,6 +755,7 @@ export default function App() {
                     locks={locks}
                     currentUser={user}
                     onActivity={trackActivity}
+                    onHistory={registerHistory}
                   />
                 </div>
               ))}
@@ -751,7 +993,7 @@ function SnapshotDialog({ onClose }: SnapshotDialogProps) {
                         <div className="flex items-center gap-2 animate-in slide-in-from-right-2">
                           <button
                             onClick={() => handleDelete(key)}
-                            className="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-black"
+                            className="bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-red-700"
                           >
                             Confirm Delete
                           </button>
@@ -1126,6 +1368,7 @@ interface DropZoneProps {
   locks: LocksData;
   currentUser: User | null;
   onActivity: () => void;
+  onHistory: (action: HistoryAction) => void;
 }
 
 function DropZone({
@@ -1138,6 +1381,7 @@ function DropZone({
   locks,
   currentUser,
   onActivity,
+  onHistory,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
@@ -1157,7 +1401,9 @@ function DropZone({
   const handleMove = (
     noteId: string,
     oldWorkerId: string,
-    newPosition: number
+    newPosition: number,
+    oldCol: number,
+    oldPos: number
   ) => {
     if (isNaN(newPosition)) {
       console.error("Attempted to set NaN position");
@@ -1165,6 +1411,18 @@ function DropZone({
     }
 
     onActivity(); // Track change
+
+    // Register History
+    onHistory({
+      type: "MOVE",
+      noteId,
+      prevWorkerId: oldWorkerId,
+      prevCol: oldCol,
+      prevPos: oldPos,
+      newWorkerId: workerId,
+      newCol: colIndex,
+      newPos: newPosition,
+    });
 
     // Play sound if moving INTO Completed column (index 2)
     // and the note wasn't already in the Completed column
@@ -1191,7 +1449,7 @@ function DropZone({
     );
   };
 
-  const handleTrashDrop = (e: React.DragEvent) => {
+  const handleTrashDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     onDragEnd();
@@ -1200,8 +1458,23 @@ function DropZone({
     try {
       const { noteId, oldWorkerId } = JSON.parse(rawData);
       onActivity(); // Track change
-      remove(ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`));
-      remove(ref(db, `locks/${noteId}`));
+
+      // Register History (Needs to fetch data first)
+      const snap = await get(
+        ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`)
+      );
+      if (snap.exists()) {
+        const noteData = snap.val();
+        onHistory({
+          type: "DELETE",
+          noteId,
+          workerId: oldWorkerId,
+          noteData,
+        });
+
+        remove(ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`));
+        remove(ref(db, `locks/${noteId}`));
+      }
     } catch (err) {
       console.error(err);
     }
@@ -1214,12 +1487,13 @@ function DropZone({
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
     try {
-      const { noteId, oldWorkerId } = JSON.parse(rawData);
+      const { noteId, oldWorkerId, oldColumn, oldPosition } =
+        JSON.parse(rawData);
       const lastPos =
         sortedNotes.length > 0
           ? sortedNotes[sortedNotes.length - 1][1].position
           : 0;
-      handleMove(noteId, oldWorkerId, lastPos + 1000);
+      handleMove(noteId, oldWorkerId, lastPos + 1000, oldColumn, oldPosition);
       remove(ref(db, `locks/${noteId}`));
     } catch (err) {
       console.error(err);
@@ -1233,12 +1507,22 @@ function DropZone({
         ? sortedNotes[sortedNotes.length - 1][1].position
         : 0;
     const newNoteRef = push(ref(db, `boarddata/${workerId}/notes`));
-    setAutoEditId(newNoteRef.key);
-    set(newNoteRef, {
+    const newNote: Note = {
       text: "New Task",
       column: colIndex,
       position: lastPos + 1000,
+    };
+
+    // Register History
+    onHistory({
+      type: "ADD",
+      noteId: newNoteRef.key!,
+      workerId,
+      noteData: newNote,
     });
+
+    setAutoEditId(newNoteRef.key);
+    set(newNoteRef, newNote);
   };
 
   return (
@@ -1281,6 +1565,7 @@ function DropZone({
             locks={locks}
             currentUser={currentUser}
             onActivity={onActivity}
+            onHistory={onHistory}
           />
         ))}
 
@@ -1334,7 +1619,13 @@ interface StickyNoteProps {
   position: number;
   prevPos: number | null;
   nextPos: number | null;
-  onReorder: (noteId: string, oldWorkerId: string, newPos: number) => void;
+  onReorder: (
+    noteId: string,
+    oldWorkerId: string,
+    newPos: number,
+    oldCol: number,
+    oldPos: number
+  ) => void;
   onDragStart: () => void;
   onDragEnd: () => void;
   isNew?: boolean;
@@ -1342,6 +1633,7 @@ interface StickyNoteProps {
   locks: LocksData;
   currentUser: User | null;
   onActivity: () => void;
+  onHistory: (action: HistoryAction) => void;
 }
 
 function StickyNote({
@@ -1361,6 +1653,7 @@ function StickyNote({
   locks,
   currentUser,
   onActivity,
+  onHistory,
 }: StickyNoteProps) {
   const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
     null
@@ -1368,6 +1661,7 @@ function StickyNote({
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
+  const initialTextRef = useRef<string>(text);
 
   // Check Lock Status
   const lock = locks[id];
@@ -1424,6 +1718,7 @@ function StickyNote({
       acquireLock().then(() => {
         setIsEditing(true);
         onEditStarted?.();
+        initialTextRef.current = text;
       });
     }
   }, [isNew, isEditing, onEditStarted, isLockedByOther]);
@@ -1459,7 +1754,8 @@ function StickyNote({
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
     try {
-      const { noteId, oldWorkerId } = JSON.parse(rawData);
+      const { noteId, oldWorkerId, oldColumn, oldPosition } =
+        JSON.parse(rawData);
       if (noteId === id) return;
 
       let newPos: number;
@@ -1468,7 +1764,7 @@ function StickyNote({
       } else {
         newPos = nextPos !== null ? (nextPos + position) / 2 : position + 1000;
       }
-      onReorder(noteId, oldWorkerId, newPos);
+      onReorder(noteId, oldWorkerId, newPos, oldColumn, oldPosition);
     } catch (err) {
       console.error(err);
     }
@@ -1476,7 +1772,17 @@ function StickyNote({
 
   const handleBlur = () => {
     if (isEditing) {
-      onActivity(); // Track change
+      const currentText = textRef.current?.innerText || "";
+      if (currentText !== initialTextRef.current) {
+        onActivity(); // Track change
+        onHistory({
+          type: "EDIT_TEXT",
+          noteId: id,
+          workerId,
+          prevText: initialTextRef.current,
+          newText: currentText,
+        });
+      }
     }
     setIsEditing(false);
     releaseLock();
@@ -1511,6 +1817,7 @@ function StickyNote({
         onDoubleClick={async () => {
           if (isLockedByOther) return;
           await acquireLock();
+          initialTextRef.current = text;
           setIsEditing(true);
         }}
         onDragStart={(e) => {
@@ -1524,7 +1831,12 @@ function StickyNote({
 
           e.dataTransfer.setData(
             "text/plain",
-            JSON.stringify({ noteId: id, oldWorkerId: workerId })
+            JSON.stringify({
+              noteId: id,
+              oldWorkerId: workerId,
+              oldColumn: column,
+              oldPosition: position,
+            })
           );
           onDragStart();
           setTimeout(() => setIsDragging(true), 0);
@@ -1580,6 +1892,16 @@ function StickyNote({
                 onClick={async (e) => {
                   e.stopPropagation();
                   onActivity(); // Track change
+
+                  // History
+                  onHistory({
+                    type: "EDIT_COLOR",
+                    noteId: id,
+                    workerId,
+                    prevColor: color || "Green",
+                    newColor: family.name,
+                  });
+
                   await acquireLock();
                   await set(
                     ref(db, `boarddata/${workerId}/notes/${id}/color`),
@@ -1596,6 +1918,20 @@ function StickyNote({
                 e.stopPropagation();
                 if (isLockedByOther) return;
                 onActivity(); // Track change
+
+                // History
+                const snap = await get(
+                  ref(db, `boarddata/${workerId}/notes/${id}`)
+                );
+                if (snap.exists()) {
+                  onHistory({
+                    type: "DELETE",
+                    noteId: id,
+                    workerId,
+                    noteData: snap.val(),
+                  });
+                }
+
                 remove(ref(db, `boarddata/${workerId}/notes/${id}`));
               }}
               className="text-[10px] text-slate-500 hover:text-red-600 font-bold px-1"
