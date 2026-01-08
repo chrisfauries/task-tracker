@@ -350,9 +350,31 @@ export default function App() {
   };
 
   // --- SNAPSHOT LOGIC ---
-  const saveSnapshot = (reason: string) => {
+  const saveSnapshot = async (reason: string) => {
     if (!auth.currentUser) return;
     const snapRef = ref(db, "snapshots");
+
+    // Prune History if > 100
+    try {
+      const snapshot = await get(query(snapRef, orderByChild("timestamp")));
+      if (snapshot.exists()) {
+        const data = snapshot.val();
+        const entries = Object.entries(data as SnapshotsData).sort(
+          (a, b) => a[1].timestamp - b[1].timestamp
+        );
+        if (entries.length >= 100) {
+          // Remove oldest items so that we have space for the new one (limit to 100 total)
+          // entries.length - 99 will leave 99 items, then we add 1 -> 100.
+          const toRemove = entries.slice(0, entries.length - 99);
+          for (const [key] of toRemove) {
+            await remove(ref(db, `snapshots/${key}`));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Error pruning snapshots", e);
+    }
+
     const newSnap: SavedSnapshot = {
       title: reason,
       timestamp: Date.now(),
@@ -601,9 +623,10 @@ export default function App() {
 
     trackActivity();
 
-    // 1. Update Note with Category Name
+    // 1. Update Note with Category Name and Category Color
     update(ref(db, `boarddata/${targetNote.workerId}/notes/${targetNote.id}`), {
       categoryName: category.name,
+      color: category.color || "Green",
     });
 
     // 2. Add Note Text to Category Items
@@ -683,6 +706,24 @@ export default function App() {
       className="h-screen flex flex-col bg-slate-50 overflow-hidden relative"
       style={{ fontFamily: "Georgia, serif" }}
     >
+      <style>{`
+        /* Custom scrollbar for notes */
+        .note-scroll::-webkit-scrollbar {
+          width: 6px;
+          height: 6px;
+        }
+        .note-scroll::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .note-scroll::-webkit-scrollbar-thumb {
+          background: transparent;
+          border-radius: 3px;
+        }
+        .note-scroll:hover::-webkit-scrollbar-thumb {
+          background: rgba(156, 163, 175, 0.5);
+        }
+      `}</style>
+
       {/* Context Menu */}
       {contextMenuPos && (
         <div
@@ -2310,7 +2351,7 @@ function StickyNote({
               textRef.current?.blur();
             }
           }}
-          className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap overflow-y-auto pb-6 flex flex-col justify-center text-center`}
+          className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap overflow-y-auto pb-6 flex flex-col justify-center text-center note-scroll`}
         >
           {text}
         </div>
