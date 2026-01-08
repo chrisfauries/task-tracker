@@ -64,6 +64,13 @@ interface DragOrigin {
   colIndex: number;
 }
 
+interface BackupData {
+  version: number;
+  timestamp: number;
+  boardData: BoardData;
+  categories: CategoriesData;
+}
+
 // --- CONFIG ---
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -92,6 +99,7 @@ export default function App() {
   // Modal States
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isImportExportDialogOpen, setIsImportExportDialogOpen] = useState(false);
   const [newWorkerName, setNewWorkerName] = useState("");
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -217,6 +225,55 @@ export default function App() {
     });
   };
 
+  // --- IMPORT / EXPORT LOGIC ---
+  const handleExport = () => {
+    const backup: BackupData = {
+      version: 1,
+      timestamp: Date.now(),
+      boardData,
+      categories,
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
+    const downloadAnchorNode = document.createElement("a");
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute(
+      "download",
+      `board_backup_${new Date().toISOString().split("T")[0]}.json`
+    );
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+  };
+
+  const handleImport = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const json = JSON.parse(e.target?.result as string) as BackupData;
+        
+        // Basic validation
+        if (!json.boardData && !json.categories) {
+          alert("Invalid backup file: Missing board data.");
+          return;
+        }
+
+        // Update DB
+        // We set these independently to ensure we don't accidentally wipe 'presence' or 'locks'
+        // if we were to set the root object.
+        await set(ref(db, "boarddata"), json.boardData || {});
+        await set(ref(db, "categories"), json.categories || {});
+        
+        setIsImportExportDialogOpen(false);
+        alert("Board restored successfully!");
+      } catch (err) {
+        console.error(err);
+        alert("Failed to parse backup file. Please ensure it is a valid JSON file exported from this app.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   if (!user)
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
@@ -262,7 +319,13 @@ export default function App() {
                 </div>
               ))}
           </div>
-
+          
+          <button
+            onClick={() => setIsImportExportDialogOpen(true)}
+            className="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-300 rounded-md hover:bg-slate-200 text-sm font-medium transition shadow-sm"
+          >
+            Import/Export
+          </button>
           <button
             onClick={() => setIsCategoryDialogOpen(true)}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 text-sm font-medium transition shadow-sm"
@@ -350,6 +413,14 @@ export default function App() {
           onApply={handleApplyCategory}
         />
       )}
+      
+      {isImportExportDialogOpen && (
+        <ImportExportDialog
+          onClose={() => setIsImportExportDialogOpen(false)}
+          onExport={handleExport}
+          onImport={handleImport}
+        />
+      )}
 
       {isWorkerDialogOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
@@ -416,6 +487,114 @@ export default function App() {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// --- SUBCOMPONENTS ---
+
+interface ImportExportDialogProps {
+  onClose: () => void;
+  onExport: () => void;
+  onImport: (file: File) => void;
+}
+
+function ImportExportDialog({ onClose, onExport, onImport }: ImportExportDialogProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [confirmingImport, setConfirmingImport] = useState<File | null>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setConfirmingImport(e.target.files[0]);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200 overflow-hidden">
+        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+          <h2 className="text-xl font-bold text-slate-800">Data Management</h2>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-600 text-2xl"
+          >
+            ✕
+          </button>
+        </div>
+        
+        <div className="p-6 space-y-6">
+          {/* EXPORT SECTION */}
+          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+            <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
+              <span className="text-xl">💾</span> Export Backup
+            </h3>
+            <p className="text-sm text-blue-600 mb-4">
+              Download a copy of the entire board state (Notes, Categories, and Rows) to your computer as a JSON file.
+            </p>
+            <button
+              onClick={onExport}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-sm"
+            >
+              Download Backup
+            </button>
+          </div>
+
+          <div className="w-full h-px bg-slate-200"></div>
+
+          {/* IMPORT SECTION */}
+          {!confirmingImport ? (
+            <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl">
+              <h3 className="font-bold text-amber-800 mb-2 flex items-center gap-2">
+                <span className="text-xl">📂</span> Import Backup
+              </h3>
+              <p className="text-sm text-amber-700 mb-4">
+                Restore the board from a previously saved JSON file. 
+                <br/>
+                <span className="font-bold">Warning:</span> This will completely overwrite the current board.
+              </p>
+              <input
+                type="file"
+                accept=".json"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full py-2.5 bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 font-medium rounded-lg transition shadow-sm"
+              >
+                Select Backup File...
+              </button>
+            </div>
+          ) : (
+            <div className="bg-red-50 border border-red-200 p-4 rounded-xl text-center">
+              <h3 className="font-bold text-red-800 mb-2 text-lg">⚠️ Are you sure?</h3>
+              <p className="text-sm text-red-600 mb-6">
+                You are about to overwrite the entire board with data from <span className="font-bold font-mono bg-red-100 px-1 rounded">{confirmingImport.name}</span>.
+                <br/><br/>
+                This action <span className="font-bold underline">cannot be undone</span>.
+              </p>
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setConfirmingImport(null);
+                    if(fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                  className="flex-1 py-2 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium"
+                >
+                  Cancel
+                </button>
+                <button 
+                  onClick={() => onImport(confirmingImport)}
+                  className="flex-1 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold shadow-md"
+                >
+                  Yes, Overwrite
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
