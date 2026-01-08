@@ -37,6 +37,7 @@ interface Note {
 interface WorkerData {
   name: string;
   notes?: Record<string, Note>;
+  defaultColor?: string;
 }
 
 interface Category {
@@ -160,12 +161,16 @@ export default function App() {
   const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
     useState(false);
   const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false);
+  
+  // Add Worker State
   const [newWorkerName, setNewWorkerName] = useState("");
+  const [newWorkerColor, setNewWorkerColor] = useState("Green");
 
   // Worker Edit State
   const [isEditWorkerDialogOpen, setIsEditWorkerDialogOpen] = useState(false);
   const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null);
   const [editWorkerName, setEditWorkerName] = useState("");
+  const [editWorkerColor, setEditWorkerColor] = useState("Green");
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [workerToDelete, setWorkerToDelete] = useState<{
@@ -483,15 +488,18 @@ export default function App() {
     push(workersRef, {
       name: newWorkerName,
       notes: {},
+      defaultColor: newWorkerColor,
     });
 
     setNewWorkerName("");
+    setNewWorkerColor("Green");
     setIsWorkerDialogOpen(false);
   };
 
   const handleEditWorkerStart = (id: string, currentName: string) => {
     setEditingWorkerId(id);
     setEditWorkerName(currentName);
+    setEditWorkerColor(boardData[id]?.defaultColor || "Green");
     setIsEditWorkerDialogOpen(true);
   };
 
@@ -501,11 +509,15 @@ export default function App() {
 
     trackActivity();
     const workerRef = ref(db, `boarddata/${editingWorkerId}`);
-    update(workerRef, { name: editWorkerName });
+    update(workerRef, { 
+      name: editWorkerName,
+      defaultColor: editWorkerColor
+    });
 
     setIsEditWorkerDialogOpen(false);
     setEditingWorkerId(null);
     setEditWorkerName("");
+    setEditWorkerColor("Green");
   };
 
   const confirmDeleteWorker = () => {
@@ -595,7 +607,10 @@ export default function App() {
 
   if (!user)
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-100">
+      <div
+        className="flex flex-col items-center justify-center h-screen bg-gray-100"
+        style={{ fontFamily: "Georgia, serif" }}
+      >
         <h1 className="text-3xl font-bold mb-6 text-slate-800">Because Band</h1>
         <button
           onClick={() => signInWithPopup(auth, provider)}
@@ -607,11 +622,23 @@ export default function App() {
     );
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative">
+    <div
+      className="h-screen flex flex-col bg-slate-50 overflow-hidden relative"
+      style={{ fontFamily: "Georgia, serif" }}
+    >
       {/* HEADER BANNER - Updated to Grid for centering */}
       <div className="p-4 border-b bg-white z-50 grid grid-cols-3 items-center shadow-sm">
-        {/* Left: Title */}
-        <h1 className="text-xl font-bold text-slate-700">Because Band Board</h1>
+        {/* Left: Title + Logo */}
+        <div className="flex items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="Because Band Logo"
+            className="h-10 w-auto object-contain"
+          />
+          <h1 className="text-xl font-bold text-slate-700">
+            Because Band Board
+          </h1>
+        </div>
 
         {/* Center: Undo/Redo */}
         <div className="flex justify-center gap-2">
@@ -780,6 +807,7 @@ export default function App() {
                     workerId={workerId}
                     colIndex={colIndex}
                     notes={worker.notes || {}}
+                    defaultColor={worker.defaultColor}
                     dragOrigin={dragOrigin}
                     onDragStart={(origin) => setDragOrigin(origin)}
                     onDragEnd={() => setDragOrigin(null)}
@@ -831,6 +859,29 @@ export default function App() {
                 value={newWorkerName}
                 onChange={(e) => setNewWorkerName(e.target.value)}
               />
+              
+              <div className="flex flex-col gap-2 mb-6">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Default Note Color
+                </label>
+                <div className="flex justify-center gap-2">
+                  {Object.values(COLOR_MATRIX).map((family) => (
+                    <button
+                      key={family.name}
+                      type="button"
+                      onClick={() => setNewWorkerColor(family.name)}
+                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                        family.shades[1].bg
+                      } ${
+                        newWorkerColor === family.name
+                          ? "border-slate-800 scale-110"
+                          : "border-transparent"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
@@ -866,6 +917,29 @@ export default function App() {
                 value={editWorkerName}
                 onChange={(e) => setEditWorkerName(e.target.value)}
               />
+
+              <div className="flex flex-col gap-2 mb-6">
+                <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  Default Note Color
+                </label>
+                <div className="flex justify-center gap-2">
+                  {Object.values(COLOR_MATRIX).map((family) => (
+                    <button
+                      key={family.name}
+                      type="button"
+                      onClick={() => setEditWorkerColor(family.name)}
+                      className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
+                        family.shades[1].bg
+                      } ${
+                        editWorkerColor === family.name
+                          ? "border-slate-800 scale-110"
+                          : "border-transparent"
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+
               <div className="flex justify-end gap-3">
                 <button
                   type="button"
@@ -1554,6 +1628,7 @@ interface DropZoneProps {
   workerId: string;
   colIndex: number;
   notes: Record<string, Note>;
+  defaultColor?: string;
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
   onDragEnd: () => void;
@@ -1567,6 +1642,7 @@ function DropZone({
   workerId,
   colIndex,
   notes,
+  defaultColor,
   dragOrigin,
   onDragStart,
   onDragEnd,
@@ -1703,6 +1779,7 @@ function DropZone({
       text: "New Task",
       column: colIndex,
       position: lastPos + 1000,
+      color: defaultColor || "Green",
     };
 
     // Register History
@@ -2071,7 +2148,7 @@ function StickyNote({
               textRef.current?.blur();
             }
           }}
-          className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap overflow-y-auto pb-6`}
+          className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap overflow-y-auto pb-6 flex flex-col justify-center text-center`}
         >
           {text}
         </div>
