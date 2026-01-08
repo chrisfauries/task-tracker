@@ -730,7 +730,7 @@ export default function App() {
 
       <div className="flex-1 overflow-auto py-8">
         <div className="min-w-[100%] flex flex-col">
-          <div className="flex mb-6 items-center">
+          <div className="flex mb-4 items-center">
             <div className="sticky left-0 bg-slate-50 z-40 w-24 pl-8 flex-none"></div>
             {["Assigned", "In Progress", "Completed"].map((h) => (
               <div
@@ -743,8 +743,8 @@ export default function App() {
           </div>
 
           {Object.entries(boardData).map(([workerId, worker]) => (
-            <div key={workerId} className="flex mb-8 min-h-[250px]">
-              <div className="sticky left-0 bg-slate-50 z-30 pl-8 pr-4 flex-none w-24">
+            <div key={workerId} className="flex mb-6 min-h-[250px]">
+              <div className="sticky left-0 bg-slate-50 z-30 pl-4 pr-4 flex-none w-16">
                 <div
                   className="bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-md h-full group relative overflow-hidden cursor-pointer hover:bg-slate-50 transition-colors"
                   onDoubleClick={() =>
@@ -775,7 +775,7 @@ export default function App() {
               </div>
 
               {[0, 1, 2].map((colIndex) => (
-                <div key={colIndex} className="w-[40%] flex-none px-4">
+                <div key={colIndex} className="w-[40%] flex-none px-2">
                   <DropZone
                     workerId={workerId}
                     colIndex={colIndex}
@@ -1230,6 +1230,28 @@ function CategoryDialog({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newCatName, setNewCatName] = useState("");
 
+  // New state for renaming categories
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+
+  // Focus and Success Feedback State
+  const [focusNewItemIndex, setFocusNewItemIndex] = useState<number | null>(
+    null
+  );
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const itemInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Effect to handle auto-focus of new items
+  useEffect(() => {
+    if (
+      focusNewItemIndex !== null &&
+      itemInputRefs.current[focusNewItemIndex]
+    ) {
+      itemInputRefs.current[focusNewItemIndex]?.focus();
+      setFocusNewItemIndex(null);
+    }
+  }, [categories, focusNewItemIndex]);
+
   const handleCreate = () => {
     if (!newCatName.trim()) return;
     const refCat = ref(db, "categories");
@@ -1249,9 +1271,54 @@ function CategoryDialog({
     update(ref(db, `categories/${id}`), { color });
   };
 
+  // Renaming Handlers
+  const startRenaming = (
+    e: React.MouseEvent,
+    id: string,
+    currentName: string
+  ) => {
+    e.stopPropagation();
+    setEditingCatId(id);
+    setRenameValue(currentName);
+  };
+
+  const saveRename = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    if (renameValue.trim()) {
+      update(ref(db, `categories/${id}`), { name: renameValue });
+    }
+    setEditingCatId(null);
+    setRenameValue("");
+  };
+
+  const cancelRename = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCatId(null);
+    setRenameValue("");
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative">
+        {/* Success Overlay */}
+        {successMessage && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="bg-white border-2 border-emerald-100 p-8 rounded-2xl shadow-xl text-center max-w-sm">
+              <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                ✓
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Success</h3>
+              <p className="text-slate-600 mb-6">{successMessage}</p>
+              <button
+                onClick={() => setSuccessMessage(null)}
+                className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-emerald-700 transition w-full"
+              >
+                Okay
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="p-6 border-b flex justify-between items-center bg-slate-50">
           <h2 className="text-2xl font-bold text-slate-800">Category Sets</h2>
           <button
@@ -1291,24 +1358,65 @@ function CategoryDialog({
                       : "hover:bg-slate-50 border-transparent"
                   }`}
                 >
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`w-3 h-3 rounded-full ${
-                        COLOR_MATRIX[cat.color || "Green"].shades[1].bg
-                      }`}
-                    />
-                    <span className="font-bold text-slate-700">{cat.name}</span>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      remove(ref(db, `categories/${id}`));
-                      if (selectedId === id) setSelectedId(null);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600"
-                  >
-                    🗑️
-                  </button>
+                  {editingCatId === id ? (
+                    // Edit Mode
+                    <div className="flex gap-2 items-center flex-1">
+                      <input
+                        type="text"
+                        value={renameValue}
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        className="w-full px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-indigo-400 outline-none"
+                        autoFocus
+                      />
+                      <button
+                        onClick={(e) => saveRename(e, id)}
+                        className="text-green-600 font-bold hover:bg-green-50 p-1 rounded"
+                      >
+                        ✓
+                      </button>
+                      <button
+                        onClick={cancelRename}
+                        className="text-slate-400 font-bold hover:bg-slate-100 p-1 rounded"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ) : (
+                    // Display Mode
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-3 h-3 rounded-full ${
+                            COLOR_MATRIX[cat.color || "Green"].shades[1].bg
+                          }`}
+                        />
+                        <span className="font-bold text-slate-700">
+                          {cat.name}
+                        </span>
+                      </div>
+                      <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <button
+                          onClick={(e) => startRenaming(e, id, cat.name)}
+                          className="text-slate-400 hover:text-blue-600"
+                          title="Rename"
+                        >
+                          ✏️
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            remove(ref(db, `categories/${id}`));
+                            if (selectedId === id) setSelectedId(null);
+                          }}
+                          className="text-red-400 hover:text-red-600"
+                          title="Delete"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -1346,9 +1454,22 @@ function CategoryDialog({
                     {(categories[selectedId].items || []).map((item, idx) => (
                       <div key={idx} className="flex gap-2">
                         <input
+                          ref={(el) => {
+                            itemInputRefs.current[idx] = el;
+                          }}
                           type="text"
                           value={item}
                           className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none font-medium text-slate-700"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.preventDefault();
+                              const currentItems =
+                                categories[selectedId].items || [];
+                              const newItems = [...currentItems, ""];
+                              updateItems(selectedId, newItems);
+                              setFocusNewItemIndex(currentItems.length); // Index of new item
+                            }
+                          }}
                           onChange={(e) => {
                             const newItems = [...categories[selectedId].items];
                             newItems[idx] = e.target.value;
@@ -1399,7 +1520,12 @@ function CategoryDialog({
                           {["Assigned", "Active", "Done"].map((label, idx) => (
                             <button
                               key={label}
-                              onClick={() => onApply(selectedId, wId, idx)}
+                              onClick={() => {
+                                onApply(selectedId, wId, idx);
+                                setSuccessMessage(
+                                  `Successfully added items to ${worker.name}`
+                                );
+                              }}
                               className="px-4 py-1.5 bg-white border border-slate-300 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition shadow-sm"
                             >
                               {label}
