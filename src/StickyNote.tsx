@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ref, set, remove, update, get, onDisconnect } from "firebase/database";
+import { ref, set, remove, update, onDisconnect } from "firebase/database";
 import { db } from "./firebase";
 import { COLOR_MATRIX } from "./constants";
 import type { User } from "firebase/auth";
 import type { LocksData, HistoryAction } from "./types";
+import { NoteMenu } from "./NoteMenu";
 
 interface StickyNoteProps {
   id: string;
@@ -67,7 +68,7 @@ export function StickyNote({
   const textRef = useRef<HTMLDivElement>(null);
   const initialTextRef = useRef<string>(text);
 
-  // Check Lock Status
+  // --- Lock Logic ---
   const lock = locks[id];
   const now = Date.now();
   const isLockValid = lock && now - lock.timestamp < 2 * 60 * 1000;
@@ -96,6 +97,8 @@ export function StickyNote({
     if (!currentUser) return;
     update(ref(db, `locks/${id}`), { timestamp: Date.now() });
   };
+
+  // --- Effects ---
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -132,6 +135,8 @@ export function StickyNote({
     }
   }, [isEditing]);
 
+  // --- Event Handlers ---
+
   const handleDragOver = (e: React.DragEvent) => {
     if (isEditing || isLockedByOther) return;
     e.preventDefault();
@@ -146,7 +151,7 @@ export function StickyNote({
     e.stopPropagation();
     const side = dropIndicator;
     setDropIndicator(null);
-    onDragEnd();
+    onDragEnd(); // Call prop
 
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
@@ -191,6 +196,54 @@ export function StickyNote({
     }
   };
 
+  const handleDoubleClick = async () => {
+    if (isLockedByOther) return;
+    await acquireLock();
+    initialTextRef.current = text;
+    setIsEditing(true);
+  };
+
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    if (isEditing || isLockedByOther) {
+      e.preventDefault();
+      return;
+    }
+    acquireLock();
+    e.dataTransfer.setData(
+      "text/plain",
+      JSON.stringify({
+        noteId: id,
+        oldWorkerId: workerId,
+        oldColumn: column,
+        oldPosition: position,
+      })
+    );
+    onDragStart(); // Call prop
+    // Delay setting dragging state to allow ghost image to be created
+    setTimeout(() => setIsDragging(true), 0);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false);
+    onDragEnd(); // Call prop
+    releaseLock();
+  };
+
+  const handleContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onContextMenu?.(e, id, workerId, text);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      textRef.current?.blur();
+    }
+  };
+
+  // --- Render ---
+
   const colorFamily = COLOR_MATRIX[color || "Green"] || COLOR_MATRIX.Green;
   const shade = colorFamily.shades[column] || colorFamily.shades[0];
 
@@ -211,40 +264,10 @@ export function StickyNote({
 
       <div
         draggable={!isEditing && !isLockedByOther}
-        onDoubleClick={async () => {
-          if (isLockedByOther) return;
-          await acquireLock();
-          initialTextRef.current = text;
-          setIsEditing(true);
-        }}
-        onDragStart={(e) => {
-          if (isEditing || isLockedByOther) {
-            e.preventDefault();
-            return;
-          }
-          acquireLock();
-          e.dataTransfer.setData(
-            "text/plain",
-            JSON.stringify({
-              noteId: id,
-              oldWorkerId: workerId,
-              oldColumn: column,
-              oldPosition: position,
-            })
-          );
-          onDragStart();
-          setTimeout(() => setIsDragging(true), 0);
-        }}
-        onDragEnd={() => {
-          setIsDragging(false);
-          onDragEnd();
-          releaseLock();
-        }}
-        onContextMenu={(e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          onContextMenu?.(e, id, workerId, text);
-        }}
+        onDoubleClick={handleDoubleClick}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onContextMenu={handleContextMenu}
         className={`${shade.bg} ${
           shade.border
         } p-4 rotate-[-0.5deg] border-l-4 min-h-[160px] aspect-square flex flex-col transition-all group/note relative
@@ -272,12 +295,7 @@ export function StickyNote({
           contentEditable={isEditing}
           suppressContentEditableWarning
           onBlur={handleBlur}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey) {
-              e.preventDefault();
-              textRef.current?.blur();
-            }
-          }}
+          onKeyDown={handleKeyDown}
           className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap overflow-y-auto pb-6 flex flex-col justify-center text-center note-scroll`}
         >
           {text}
@@ -291,56 +309,17 @@ export function StickyNote({
           </div>
         )}
 
-        {!isLockedByOther && (
-          <div className="absolute m-[8px] bottom-2 left-0 right-0 flex items-center justify-center gap-1 opacity-0 group-hover/note:opacity-100 transition-opacity bg-white/60 backdrop-blur-sm py-1.5 rounded-full shadow-sm z-30 border border-white/50">
-            {Object.values(COLOR_MATRIX).map((family) => (
-              <button
-                key={family.name}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  onActivity();
-                  onHistory({
-                    type: "EDIT_COLOR",
-                    noteId: id,
-                    workerId,
-                    prevColor: color || "Green",
-                    newColor: family.name,
-                  });
-                  await acquireLock();
-                  await set(
-                    ref(db, `boarddata/${workerId}/notes/${id}/color`),
-                    family.name
-                  );
-                  releaseLock();
-                }}
-                className={`w-3 h-3 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
-              />
-            ))}
-            <div className="w-px h-3 bg-black/10 mx-1" />
-            <button
-              onClick={async (e) => {
-                e.stopPropagation();
-                if (isLockedByOther) return;
-                onActivity();
-                const snap = await get(
-                  ref(db, `boarddata/${workerId}/notes/${id}`)
-                );
-                if (snap.exists()) {
-                  onHistory({
-                    type: "DELETE",
-                    noteId: id,
-                    workerId,
-                    noteData: snap.val(),
-                  });
-                }
-                remove(ref(db, `boarddata/${workerId}/notes/${id}`));
-              }}
-              className="text-[10px] text-slate-500 hover:text-red-600 font-bold px-1"
-            >
-              ✕
-            </button>
-          </div>
-        )}
+        {/* Note Menu (Color picker + Delete) */}
+        <NoteMenu
+          id={id}
+          workerId={workerId}
+          color={color}
+          isLockedByOther={!!isLockedByOther}
+          onActivity={onActivity}
+          onHistory={onHistory}
+          acquireLock={acquireLock}
+          releaseLock={releaseLock}
+        />
       </div>
     </div>
   );

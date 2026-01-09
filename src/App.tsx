@@ -2,18 +2,12 @@ import React, { useState, useEffect } from "react";
 import { ref, push, remove, update, set } from "firebase/database";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-
-// --- IMPORTED MODULES ---
 import { db, auth, provider } from "./firebase";
 import type { DragOrigin, BackupData } from "./types";
-
-// --- HOOKS ---
 import { usePresence } from "./hooks/usePresence";
 import { useBoardData } from "./hooks/useBoardData";
 import { useSnapshots } from "./hooks/useSnapshots";
 import { useHistory } from "./hooks/useHistory";
-
-// --- COMPONENTS ---
 import { TopBanner } from "./TopBanner";
 import { Board } from "./Board";
 import { ContextMenu } from "./ContextMenu";
@@ -230,16 +224,13 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative" style={{ fontFamily: "Georgia, serif" }}>
-      <style>{`.note-scroll::-webkit-scrollbar { width: 6px; height: 6px; } .note-scroll::-webkit-scrollbar-track { background: transparent; } .note-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; } .note-scroll:hover::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); }`}</style>
 
-      {/* Context Menu Component */}
       <ContextMenu 
         position={contextMenuPos} 
         onClose={() => setContextMenuPos(null)} 
         onAddToCategory={() => setIsAddToCatDialogOpen(true)} 
       />
 
-      {/* MAIN LAYOUT */}
       <TopBanner
         user={user}
         history={history}
@@ -273,7 +264,6 @@ export default function App() {
       {isCategoryDialogOpen && <CategoryDialog categories={categories} boardData={boardData} onClose={() => setIsCategoryDialogOpen(false)} onApply={handleApplyCategory} />}
       {isImportExportDialogOpen && <ImportExportDialog onClose={() => setIsImportExportDialogOpen(false)} onExport={handleExport} onImport={handleImport} />}
       {isSnapshotDialogOpen && <SnapshotDialog onClose={() => setIsSnapshotDialogOpen(false)} />}
-      
       {isWorkerDialogOpen && <AddWorkerDialog name={newWorkerName} setName={setNewWorkerName} color={newWorkerColor} setColor={setNewWorkerColor} onClose={() => setIsWorkerDialogOpen(false)} onSubmit={handleAddWorker} />}
       {isEditWorkerDialogOpen && <EditWorkerDialog name={editWorkerName} setName={setEditWorkerName} color={editWorkerColor} setColor={setEditWorkerColor} onClose={() => setIsEditWorkerDialogOpen(false)} onSubmit={handleEditWorkerSave} />}
       {isDeleteDialogOpen && <DeleteWorkerDialog name={workerToDelete?.name || ""} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDeleteWorker} />}
