@@ -7,6 +7,7 @@ import type {
   HistoryAction,
   DragOrigin,
 } from "./types";
+import { COLUMN_NAMES } from "./constants";
 
 interface BoardProps {
   boardData: BoardData;
@@ -46,12 +47,12 @@ export function Board({
         {/* Column Headers */}
         <div className="flex mb-4 items-center">
           <div className="sticky left-0 bg-slate-50 z-40 w-24 pl-8 flex-none"></div>
-          {["Assigned", "In Progress", "Completed"].map((h) => (
+          {Object.values(COLUMN_NAMES).map((columnName) => (
             <div
-              key={h}
+              key={columnName}
               className="w-[40%] flex-none text-center font-bold text-slate-400 uppercase text-xs tracking-widest px-4"
             >
-              {h}
+              {columnName}
             </div>
           ))}
         </div>

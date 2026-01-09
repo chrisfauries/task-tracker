@@ -1,3 +1,11 @@
+export const COLUMN_NAMES = {
+  ASSIGNED: "Assigned",
+  IN_PROGRESS: "In Progress",
+  COMPLETED: "Completed",
+} as const;
+
+export type COLUMN_NAME = typeof COLUMN_NAMES[keyof typeof COLUMN_NAMES];
+
 export const BELL_SOUND_URL = "/bell.mp3";
 
 export const COLOR_MATRIX: Record<string, any> = {

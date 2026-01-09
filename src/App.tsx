@@ -16,6 +16,8 @@ import { useHistory } from "./hooks/useHistory";
 // --- COMPONENTS ---
 import { TopBanner } from "./TopBanner";
 import { Board } from "./Board";
+import { ContextMenu } from "./ContextMenu";
+import { Login } from "./Login";
 import { SnapshotDialog } from "./modals/SnapshotDialog";
 import { CategoryDialog } from "./modals/CategoryManagementDialog";
 import { ImportExportDialog } from "./modals/ImportExportDialog";
@@ -80,6 +82,10 @@ export default function App() {
     });
     return () => unsubscribeAuth();
   }, []);
+
+  const handleLogin = () => {
+    signInWithPopup(auth, provider);
+  };
 
   const handleLogout = async () => {
     if (user) {
@@ -219,26 +225,19 @@ export default function App() {
   };
 
   if (!user) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-100" style={{ fontFamily: "Georgia, serif" }}>
-        <h1 className="text-3xl font-bold mb-6 text-slate-800">Because Band</h1>
-        <button onClick={() => signInWithPopup(auth, provider)} className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition shadow-lg">
-          Sign in with Google
-        </button>
-      </div>
-    );
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative" style={{ fontFamily: "Georgia, serif" }}>
       <style>{`.note-scroll::-webkit-scrollbar { width: 6px; height: 6px; } .note-scroll::-webkit-scrollbar-track { background: transparent; } .note-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; } .note-scroll:hover::-webkit-scrollbar-thumb { background: rgba(156, 163, 175, 0.5); }`}</style>
 
-      {/* Context Menu Overlay */}
-      {contextMenuPos && (
-        <div style={{ top: contextMenuPos.y, left: contextMenuPos.x }} className="fixed bg-white shadow-xl border border-slate-200 rounded-lg py-1 z-[100] min-w-[160px] animate-in fade-in zoom-in-95 duration-100">
-          <button onClick={(e) => { e.stopPropagation(); setContextMenuPos(null); setIsAddToCatDialogOpen(true); }} className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700">Add to category...</button>
-        </div>
-      )}
+      {/* Context Menu Component */}
+      <ContextMenu 
+        position={contextMenuPos} 
+        onClose={() => setContextMenuPos(null)} 
+        onAddToCategory={() => setIsAddToCatDialogOpen(true)} 
+      />
 
       {/* MAIN LAYOUT */}
       <TopBanner
