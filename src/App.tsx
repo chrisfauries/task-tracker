@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { ref, push, remove, update, set } from "firebase/database";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { db, auth, provider } from "./firebase";
+import { auth, provider } from "./firebase";
+import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin, BackupData } from "./types";
 import { usePresence } from "./hooks/usePresence";
 import { useBoardData } from "./hooks/useBoardData";
@@ -54,14 +54,12 @@ export default function App() {
   const [targetNote, setTargetNote] = useState<{ id: string; workerId: string; text: string; } | null>(null);
   const [isAddToCatDialogOpen, setIsAddToCatDialogOpen] = useState(false);
 
-  // Global click listener to close context menu
   useEffect(() => {
     const handleClick = () => setContextMenuPos(null);
     window.addEventListener("click", handleClick);
     return () => window.removeEventListener("click", handleClick);
   }, []);
 
-  // Global drag end listener
   useEffect(() => {
     if (!user) return;
     const handleGlobalDragEnd = () => setDragOrigin(null);
@@ -69,7 +67,6 @@ export default function App() {
     return () => window.removeEventListener("dragend", handleGlobalDragEnd);
   }, [user]);
 
-  // Auth Listener
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
       setUser(u);
@@ -90,17 +87,12 @@ export default function App() {
     signOut(auth);
   };
 
-  const handleAddWorker = (e: React.FormEvent) => {
+  const handleAddWorker = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newWorkerName.trim()) return;
 
     trackActivity();
-    const workersRef = ref(db, "boarddata");
-    push(workersRef, {
-      name: newWorkerName,
-      notes: {},
-      defaultColor: newWorkerColor,
-    });
+    await DatabaseService.createWorker(newWorkerName, newWorkerColor);
 
     setNewWorkerName("");
     setNewWorkerColor("Green");
@@ -114,13 +106,12 @@ export default function App() {
     setIsEditWorkerDialogOpen(true);
   };
 
-  const handleEditWorkerSave = (e: React.FormEvent) => {
+  const handleEditWorkerSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editWorkerName.trim() || !editingWorkerId) return;
 
     trackActivity();
-    const workerRef = ref(db, `boarddata/${editingWorkerId}`);
-    update(workerRef, { name: editWorkerName, defaultColor: editWorkerColor });
+    await DatabaseService.updateWorker(editingWorkerId, { name: editWorkerName, defaultColor: editWorkerColor });
 
     setIsEditWorkerDialogOpen(false);
     setEditingWorkerId(null);
@@ -128,16 +119,16 @@ export default function App() {
     setEditWorkerColor("Green");
   };
 
-  const confirmDeleteWorker = () => {
+  const confirmDeleteWorker = async () => {
     if (workerToDelete) {
       trackActivity();
-      remove(ref(db, `boarddata/${workerToDelete.id}`));
+      await DatabaseService.deleteWorker(workerToDelete.id);
       setIsDeleteDialogOpen(false);
       setWorkerToDelete(null);
     }
   };
 
-  const handleApplyCategory = (catId: string, workerId: string, colIndex: number) => {
+  const handleApplyCategory = async (catId: string, workerId: string, colIndex: number) => {
     const category = categories[catId];
     if (!category || !category.items) return;
 
@@ -148,16 +139,16 @@ export default function App() {
       .map((n) => n.position);
     const lastPos = validPositions.length > 0 ? Math.max(...validPositions) : 0;
 
-    category.items.forEach((text, index) => {
-      const newNoteRef = push(ref(db, `boarddata/${workerId}/notes`));
-      set(newNoteRef, {
+    // We can iterate and create notes
+    for (const [index, text] of category.items.entries()) {
+      await DatabaseService.createNote(workerId, {
         text,
         column: colIndex,
         color: category.color || "Green",
         position: lastPos + 1000 + index * 10,
         categoryName: category.name,
       });
-    });
+    }
   };
 
   const handleNoteContextMenu = (e: React.MouseEvent, noteId: string, workerId: string, text: string) => {
@@ -166,20 +157,22 @@ export default function App() {
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
-  const handleAssignCategory = (catId: string) => {
+  const handleAssignCategory = async (catId: string) => {
     if (!targetNote) return;
     const category = categories[catId];
     if (!category) return;
     trackActivity();
 
-    update(ref(db, `boarddata/${targetNote.workerId}/notes/${targetNote.id}`), {
-      categoryName: category.name,
-      color: category.color || "Green",
-    });
+    await DatabaseService.updateNoteCategory(
+      targetNote.workerId,
+      targetNote.id,
+      category.name,
+      category.color || "Green"
+    );
 
     const currentItems = category.items || [];
     const newItems = [...currentItems, targetNote.text];
-    update(ref(db, `categories/${catId}`), { items: newItems });
+    await DatabaseService.updateCategory(catId, { items: newItems });
 
     setIsAddToCatDialogOpen(false);
     setTargetNote(null);
@@ -206,8 +199,7 @@ export default function App() {
           return;
         }
         trackActivity();
-        await set(ref(db, "boarddata"), json.boardData || {});
-        await set(ref(db, "categories"), json.categories || {});
+        await DatabaseService.restoreBackup(json.boardData || {}, json.categories || {});
         setIsImportExportDialogOpen(false);
         alert("Board restored successfully!");
       } catch (err) {

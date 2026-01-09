@@ -1,13 +1,7 @@
 import { useState, useEffect } from "react";
-import { ref, onValue, DataSnapshot } from "firebase/database";
-import { db } from "../firebase";
+import { DatabaseService } from "../DatabaseService";
 import type { User } from "firebase/auth";
-import type {
-  BoardData,
-  CategoriesData,
-  LocksData,
-  AllPresenceData,
-} from "../types";
+import type { BoardData, CategoriesData, LocksData, AllPresenceData } from "../types";
 
 export function useBoardData(user: User | null) {
   const [boardData, setBoardData] = useState<BoardData>({});
@@ -24,38 +18,16 @@ export function useBoardData(user: User | null) {
       return;
     }
 
-    const boardRef = ref(db, "boarddata");
-    const unsubscribeDb = onValue(boardRef, (snapshot: DataSnapshot) => {
-      const data = snapshot.val() as BoardData | null;
-      setBoardData(data || {});
-    });
-
-    const catRef = ref(db, "categories");
-    const unsubscribeCats = onValue(catRef, (snapshot: DataSnapshot) => {
-      const data = snapshot.val() as CategoriesData | null;
-      setCategories(data || {});
-    });
-
-    const locksRef = ref(db, "locks");
-    const unsubscribeLocks = onValue(locksRef, (snapshot: DataSnapshot) => {
-      const data = snapshot.val() as LocksData | null;
-      setLocks(data || {});
-    });
-
-    const presenceRef = ref(db, "presence");
-    const unsubscribePresence = onValue(
-      presenceRef,
-      (snapshot: DataSnapshot) => {
-        const data = snapshot.val() as AllPresenceData | null;
-        setPresence(data || {});
-      }
-    );
+    const unsubBoard = DatabaseService.subscribeToBoardData(setBoardData);
+    const unsubCats = DatabaseService.subscribeToCategories(setCategories);
+    const unsubLocks = DatabaseService.subscribeToLocks(setLocks);
+    const unsubPresence = DatabaseService.subscribeToPresence(setPresence);
 
     return () => {
-      unsubscribeDb();
-      unsubscribeCats();
-      unsubscribeLocks();
-      unsubscribePresence();
+      unsubBoard();
+      unsubCats();
+      unsubLocks();
+      unsubPresence();
     };
   }, [user]);
 

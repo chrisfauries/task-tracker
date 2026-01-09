@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { ref, onValue, set, remove, query, limitToLast, orderByChild } from "firebase/database";
-import { db } from "../firebase";
+import { DatabaseService } from "../DatabaseService";
 import type { SnapshotsData, SavedSnapshot } from "../types";
 
 interface SnapshotDialogProps {
@@ -14,9 +13,8 @@ export function SnapshotDialog({ onClose }: SnapshotDialogProps) {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    const snapshotsRef = query(ref(db, "snapshots"), orderByChild("timestamp"), limitToLast(50));
-    const unsubscribe = onValue(snapshotsRef, (snapshot) => {
-      setSnapshots((snapshot.val() as SnapshotsData) || {});
+    const unsubscribe = DatabaseService.subscribeToSnapshots((data) => {
+      setSnapshots(data);
       setLoading(false);
     });
     return () => unsubscribe();
@@ -26,8 +24,7 @@ export function SnapshotDialog({ onClose }: SnapshotDialogProps) {
 
   const handleRestore = async (snap: SavedSnapshot) => {
     try {
-      await set(ref(db, "boarddata"), snap.boardData || {});
-      await set(ref(db, "categories"), snap.categories || {});
+      await DatabaseService.restoreBackup(snap.boardData || {}, snap.categories || {});
       alert("Board restored successfully!");
       setConfirmRestoreId(null);
       onClose();
@@ -39,7 +36,7 @@ export function SnapshotDialog({ onClose }: SnapshotDialogProps) {
 
   const handleDelete = async (key: string) => {
     try {
-      await remove(ref(db, `snapshots/${key}`));
+      await DatabaseService.deleteSnapshot(key);
       setConfirmDeleteId(null);
     } catch (e) {
       console.error(e);

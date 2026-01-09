@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { ref, set, remove, get } from "firebase/database";
-import { db } from "../firebase";
+import { DatabaseService } from "../DatabaseService";
 import type { User } from "firebase/auth";
 import type { HistoryAction } from "../types";
 
@@ -8,7 +7,6 @@ export function useHistory(user: User | null, trackActivity: () => void) {
   const [history, setHistory] = useState<HistoryAction[]>([]);
   const [future, setFuture] = useState<HistoryAction[]>([]);
 
-  // Clear history on logout
   useEffect(() => {
     if (!user) {
       setHistory([]);
@@ -18,7 +16,7 @@ export function useHistory(user: User | null, trackActivity: () => void) {
 
   const registerHistory = (action: HistoryAction) => {
     setHistory((prev) => [...prev, action]);
-    setFuture([]); // Clear redo stack on new action
+    setFuture([]); 
     trackActivity();
   };
 
@@ -31,52 +29,28 @@ export function useHistory(user: User | null, trackActivity: () => void) {
 
     switch (action.type) {
       case "MOVE":
-        const snapMove = await get(
-          ref(db, `boarddata/${action.newWorkerId}/notes/${action.noteId}`)
-        );
-
-        if (snapMove.exists()) {
-          const noteVal = snapMove.val();
-
-          // Restore to previous location
-          await set(
-            ref(db, `boarddata/${action.prevWorkerId}/notes/${action.noteId}`),
-            {
-              ...noteVal,
-              column: action.prevCol,
-              position: action.prevPos,
-            }
+        const currentNote = await DatabaseService.getNote(action.newWorkerId, action.noteId);
+        if (currentNote) {
+          // Move back to old location
+          await DatabaseService.moveNote(
+            action.noteId,
+            action.newWorkerId, // current loc
+            action.prevWorkerId, // target loc (old)
+            { ...currentNote, column: action.prevCol, position: action.prevPos }
           );
-
-          if (action.newWorkerId !== action.prevWorkerId) {
-            await remove(
-              ref(db, `boarddata/${action.newWorkerId}/notes/${action.noteId}`)
-            );
-          }
         }
         break;
       case "ADD":
-        await remove(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`)
-        );
+        await DatabaseService.deleteNote(action.workerId, action.noteId);
         break;
       case "DELETE":
-        await set(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`),
-          action.noteData
-        );
+        await DatabaseService.addNote(action.workerId, action.noteId, action.noteData);
         break;
       case "EDIT_TEXT":
-        await set(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/text`),
-          action.prevText
-        );
+        await DatabaseService.updateNoteText(action.workerId, action.noteId, action.prevText);
         break;
       case "EDIT_COLOR":
-        await set(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/color`),
-          action.prevColor
-        );
+        await DatabaseService.updateNoteColor(action.workerId, action.noteId, action.prevColor);
         break;
     }
   };
@@ -90,50 +64,27 @@ export function useHistory(user: User | null, trackActivity: () => void) {
 
     switch (action.type) {
       case "MOVE":
-        const snapMove = await get(
-          ref(db, `boarddata/${action.prevWorkerId}/notes/${action.noteId}`)
-        );
-        if (snapMove.exists()) {
-          const noteVal = snapMove.val();
-
-          await set(
-            ref(db, `boarddata/${action.newWorkerId}/notes/${action.noteId}`),
-            {
-              ...noteVal,
-              column: action.newCol,
-              position: action.newPos,
-            }
+        const currentNote = await DatabaseService.getNote(action.prevWorkerId, action.noteId);
+        if (currentNote) {
+           await DatabaseService.moveNote(
+            action.noteId,
+            action.prevWorkerId,
+            action.newWorkerId,
+            { ...currentNote, column: action.newCol, position: action.newPos }
           );
-
-          if (action.prevWorkerId !== action.newWorkerId) {
-            await remove(
-              ref(db, `boarddata/${action.prevWorkerId}/notes/${action.noteId}`)
-            );
-          }
         }
         break;
       case "ADD":
-        await set(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`),
-          action.noteData
-        );
+        await DatabaseService.addNote(action.workerId, action.noteId, action.noteData);
         break;
       case "DELETE":
-        await remove(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}`)
-        );
+        await DatabaseService.deleteNote(action.workerId, action.noteId);
         break;
       case "EDIT_TEXT":
-        await set(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/text`),
-          action.newText
-        );
+        await DatabaseService.updateNoteText(action.workerId, action.noteId, action.newText);
         break;
       case "EDIT_COLOR":
-        await set(
-          ref(db, `boarddata/${action.workerId}/notes/${action.noteId}/color`),
-          action.newColor
-        );
+        await DatabaseService.updateNoteColor(action.workerId, action.noteId, action.newColor);
         break;
     }
   };

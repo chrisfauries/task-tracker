@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { ref, set, remove, update, onDisconnect } from "firebase/database";
-import { db } from "./firebase";
+import { DatabaseService } from "./DatabaseService";
 import { COLOR_MATRIX } from "./constants";
 import type { User } from "firebase/auth";
 import type { LocksData, HistoryAction } from "./types";
@@ -68,7 +67,6 @@ export function StickyNote({
   const textRef = useRef<HTMLDivElement>(null);
   const initialTextRef = useRef<string>(text);
 
-  // --- Lock Logic ---
   const lock = locks[id];
   const now = Date.now();
   const isLockValid = lock && now - lock.timestamp < 2 * 60 * 1000;
@@ -77,28 +75,19 @@ export function StickyNote({
 
   const acquireLock = async () => {
     if (!currentUser) return false;
-    const lockRef = ref(db, `locks/${id}`);
-    await set(lockRef, {
-      userId: currentUser.uid,
-      userName: currentUser.displayName || "Unknown",
-      timestamp: Date.now(),
-    });
-    onDisconnect(lockRef).remove();
+    await DatabaseService.acquireLock(id, currentUser);
     return true;
   };
 
-  const releaseLock = () => {
+  const releaseLock = async () => {
     if (!currentUser) return;
-    remove(ref(db, `locks/${id}`));
-    onDisconnect(ref(db, `locks/${id}`)).cancel();
+    await DatabaseService.releaseLock(id);
   };
 
-  const renewLock = () => {
+  const renewLock = async () => {
     if (!currentUser) return;
-    update(ref(db, `locks/${id}`), { timestamp: Date.now() });
+    await DatabaseService.renewLock(id);
   };
-
-  // --- Effects ---
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
@@ -135,8 +124,6 @@ export function StickyNote({
     }
   }, [isEditing]);
 
-  // --- Event Handlers ---
-
   const handleDragOver = (e: React.DragEvent) => {
     if (isEditing || isLockedByOther) return;
     e.preventDefault();
@@ -151,7 +138,7 @@ export function StickyNote({
     e.stopPropagation();
     const side = dropIndicator;
     setDropIndicator(null);
-    onDragEnd(); // Call prop
+    onDragEnd();
 
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
@@ -189,10 +176,7 @@ export function StickyNote({
     setIsEditing(false);
     releaseLock();
     if (textRef.current) {
-      set(
-        ref(db, `boarddata/${workerId}/notes/${id}/text`),
-        textRef.current.innerText
-      );
+      DatabaseService.updateNoteText(workerId, id, textRef.current.innerText);
     }
   };
 
@@ -218,14 +202,13 @@ export function StickyNote({
         oldPosition: position,
       })
     );
-    onDragStart(); // Call prop
-    // Delay setting dragging state to allow ghost image to be created
+    onDragStart();
     setTimeout(() => setIsDragging(true), 0);
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
-    onDragEnd(); // Call prop
+    onDragEnd();
     releaseLock();
   };
 
@@ -241,8 +224,6 @@ export function StickyNote({
       textRef.current?.blur();
     }
   };
-
-  // --- Render ---
 
   const colorFamily = COLOR_MATRIX[color || "Green"] || COLOR_MATRIX.Green;
   const shade = colorFamily.shades[column] || colorFamily.shades[0];
@@ -309,7 +290,6 @@ export function StickyNote({
           </div>
         )}
 
-        {/* Note Menu (Color picker + Delete) */}
         <NoteMenu
           id={id}
           workerId={workerId}

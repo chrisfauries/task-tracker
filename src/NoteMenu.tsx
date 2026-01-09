@@ -1,5 +1,4 @@
-import { ref, set, remove, get } from "firebase/database";
-import { db } from "./firebase";
+import { DatabaseService } from "./DatabaseService";
 import { COLOR_MATRIX } from "./constants";
 import type { HistoryAction } from "./types";
 
@@ -24,11 +23,6 @@ export function NoteMenu({
   acquireLock,
   releaseLock,
 }: NoteMenuProps) {
-  // If locked by someone else, we don't render the menu at all (or render it disabled)
-  // based on the previous logic, the menu container itself was hidden if locked,
-  // but let's double check the container logic in parent.
-  // In the original, the menu was only rendered if (!isLockedByOther).
-  // We will keep that logic in the parent or return null here.
   if (isLockedByOther) return null;
 
   return (
@@ -47,10 +41,7 @@ export function NoteMenu({
               newColor: family.name,
             });
             await acquireLock();
-            await set(
-              ref(db, `boarddata/${workerId}/notes/${id}/color`),
-              family.name
-            );
+            await DatabaseService.updateNoteColor(workerId, id, family.name);
             releaseLock();
           }}
           className={`w-3 h-3 rounded-full ${family.shades[1].bg} border border-black/10 hover:scale-125 transition-transform shadow-sm`}
@@ -60,19 +51,18 @@ export function NoteMenu({
       <button
         onClick={async (e) => {
           e.stopPropagation();
-          // redundant check since component returns null if locked, but good for safety
           if (isLockedByOther) return;
           onActivity();
-          const snap = await get(ref(db, `boarddata/${workerId}/notes/${id}`));
-          if (snap.exists()) {
+          const noteData = await DatabaseService.getNote(workerId, id);
+          if (noteData) {
             onHistory({
               type: "DELETE",
               noteId: id,
               workerId,
-              noteData: snap.val(),
+              noteData,
             });
           }
-          remove(ref(db, `boarddata/${workerId}/notes/${id}`));
+          await DatabaseService.deleteNote(workerId, id);
         }}
         className="text-[10px] text-slate-500 hover:text-red-600 font-bold px-1"
       >

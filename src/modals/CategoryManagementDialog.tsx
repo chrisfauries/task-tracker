@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { ref, push, update, remove } from "firebase/database";
-import { db } from "../firebase";
+import { DatabaseService } from "../DatabaseService";
 import { COLOR_MATRIX } from "../constants";
 import type { CategoriesData, BoardData } from "../types";
 
@@ -20,16 +19,13 @@ export function CategoryDialog({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newCatName, setNewCatName] = useState("");
 
-  // Renaming State
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
-  // Focus and Success Feedback State
   const [focusNewItemIndex, setFocusNewItemIndex] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const itemInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
-  // Effect to handle auto-focus of new items
   useEffect(() => {
     if (focusNewItemIndex !== null && itemInputRefs.current[focusNewItemIndex]) {
       itemInputRefs.current[focusNewItemIndex]?.focus();
@@ -37,36 +33,30 @@ export function CategoryDialog({
     }
   }, [categories, focusNewItemIndex]);
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newCatName.trim()) return;
-    const refCat = ref(db, "categories");
-    push(refCat, {
-      name: newCatName,
-      items: ["Example Item"],
-      color: "Green",
-    });
+    await DatabaseService.createCategory(newCatName);
     setNewCatName("");
   };
 
-  const updateItems = (id: string, newItems: string[]) => {
-    update(ref(db, `categories/${id}`), { items: newItems });
+  const updateItems = async (id: string, newItems: string[]) => {
+    await DatabaseService.updateCategory(id, { items: newItems });
   };
 
-  const updateColor = (id: string, color: string) => {
-    update(ref(db, `categories/${id}`), { color });
+  const updateColor = async (id: string, color: string) => {
+    await DatabaseService.updateCategory(id, { color });
   };
 
-  // Renaming Handlers
   const startRenaming = (e: React.MouseEvent, id: string, currentName: string) => {
     e.stopPropagation();
     setEditingCatId(id);
     setRenameValue(currentName);
   };
 
-  const saveRename = (e: React.MouseEvent, id: string) => {
+  const saveRename = async (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     if (renameValue.trim()) {
-      update(ref(db, `categories/${id}`), { name: renameValue });
+      await DatabaseService.updateCategory(id, { name: renameValue });
     }
     setEditingCatId(null);
     setRenameValue("");
@@ -81,7 +71,6 @@ export function CategoryDialog({
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative">
-        {/* Success Overlay */}
         {successMessage && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm animate-in fade-in duration-200">
             <div className="bg-white border-2 border-emerald-100 p-8 rounded-2xl shadow-xl text-center max-w-sm">
@@ -99,7 +88,6 @@ export function CategoryDialog({
         </div>
 
         <div className="flex-1 overflow-auto flex">
-          {/* LEFT SIDEBAR: LIST */}
           <div className="w-1/3 border-r p-6 overflow-y-auto">
             <div className="flex gap-2 mb-6">
               <input type="text" placeholder="Category Name" className="flex-1 px-3 py-2 border rounded-lg text-sm" value={newCatName} onChange={(e) => setNewCatName(e.target.value)} />
@@ -130,9 +118,9 @@ export function CategoryDialog({
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => startRenaming(e, id, cat.name)} className="text-slate-400 hover:text-blue-600" title="Rename">✏️</button>
                         <button
-                          onClick={(e) => {
+                          onClick={async (e) => {
                             e.stopPropagation();
-                            remove(ref(db, `categories/${id}`));
+                            await DatabaseService.deleteCategory(id);
                             if (selectedId === id) setSelectedId(null);
                           }}
                           className="text-red-400 hover:text-red-600"
@@ -148,7 +136,6 @@ export function CategoryDialog({
             </div>
           </div>
 
-          {/* RIGHT SIDE: DETAILS */}
           <div className="flex-1 p-8 bg-white overflow-y-auto">
             {selectedId ? (
               <div className="space-y-8">
