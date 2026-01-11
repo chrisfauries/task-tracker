@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
+import { useAtomValue } from "jotai"; // Import Jotai hook
+import { isSnapshotDialogOpenAtom } from "./atoms"; // Import atom
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin, BackupData } from "./types";
@@ -34,7 +36,7 @@ export default function App() {
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isImportExportDialogOpen, setIsImportExportDialogOpen] = useState(false);
-  const [isSnapshotDialogOpen, setIsSnapshotDialogOpen] = useState(false);
+  const isSnapshotDialogOpen = useAtomValue(isSnapshotDialogOpenAtom); 
 
   // Add Worker State
   const [newWorkerName, setNewWorkerName] = useState("");
@@ -231,7 +233,7 @@ export default function App() {
         onUndo={handleUndo}
         onRedo={handleRedo}
         onLogout={handleLogout}
-        onOpenSnapshots={() => setIsSnapshotDialogOpen(true)}
+        // onOpenSnapshots removed
         onOpenImportExport={() => setIsImportExportDialogOpen(true)}
         onOpenCategories={() => setIsCategoryDialogOpen(true)}
         onOpenAddWorker={() => setIsWorkerDialogOpen(true)}
@@ -255,7 +257,9 @@ export default function App() {
       {isAddToCatDialogOpen && <AddToCategoryDialog categories={categories} onClose={() => setIsAddToCatDialogOpen(false)} onSelect={handleAssignCategory} />}
       {isCategoryDialogOpen && <CategoryDialog categories={categories} boardData={boardData} onClose={() => setIsCategoryDialogOpen(false)} onApply={handleApplyCategory} />}
       {isImportExportDialogOpen && <ImportExportDialog onClose={() => setIsImportExportDialogOpen(false)} onExport={handleExport} onImport={handleImport} />}
-      {isSnapshotDialogOpen && <SnapshotDialog onClose={() => setIsSnapshotDialogOpen(false)} />}
+      
+      {/* SnapshotDialog now closes itself via atom */}
+      {isSnapshotDialogOpen && <SnapshotDialog />}   
       {isWorkerDialogOpen && <AddWorkerDialog name={newWorkerName} setName={setNewWorkerName} color={newWorkerColor} setColor={setNewWorkerColor} onClose={() => setIsWorkerDialogOpen(false)} onSubmit={handleAddWorker} />}
       {isEditWorkerDialogOpen && <EditWorkerDialog name={editWorkerName} setName={setEditWorkerName} color={editWorkerColor} setColor={setEditWorkerColor} onClose={() => setIsEditWorkerDialogOpen(false)} onSubmit={handleEditWorkerSave} />}
       {isDeleteDialogOpen && <DeleteWorkerDialog name={workerToDelete?.name || ""} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDeleteWorker} />}

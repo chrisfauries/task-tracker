@@ -3,6 +3,8 @@ import type { HistoryAction, AllPresenceData } from "./types";
 import { UndoRedoControls } from "./UndoRedoControls";
 import { Button } from "./Button";
 import { AvatarList } from "./AvatarList";
+import { useSetAtom } from "jotai";
+import { isSnapshotDialogOpenAtom } from "./atoms";
 
 interface TopBannerProps {
   user: User | null;
@@ -12,7 +14,6 @@ interface TopBannerProps {
   onUndo: () => void;
   onRedo: () => void;
   onLogout: () => void;
-  onOpenSnapshots: () => void;
   onOpenImportExport: () => void;
   onOpenCategories: () => void;
   onOpenAddWorker: () => void;
@@ -25,11 +26,12 @@ export function TopBanner({
   onUndo,
   onRedo,
   onLogout,
-  onOpenSnapshots,
   onOpenImportExport,
   onOpenCategories,
   onOpenAddWorker,
 }: TopBannerProps) {
+  const setIsSnapshotOpen = useSetAtom(isSnapshotDialogOpenAtom);
+
   return (
     <div className="p-4 border-b bg-white z-50 grid grid-cols-3 items-center shadow-sm">
       {/* Left: Title + Logo */}
@@ -58,7 +60,7 @@ export function TopBanner({
         />
 
         <Button
-          onClick={onOpenSnapshots}
+          onClick={() => setIsSnapshotOpen(true)}
           variant="secondary"
           className="flex items-center gap-2"
         >
