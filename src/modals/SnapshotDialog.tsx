@@ -10,18 +10,13 @@ import type { SavedSnapshot } from "../types";
 
 export function SnapshotDialog() {
   const setIsOpen = useSetAtom(isSnapshotDialogOpenAtom);
-  const snapshots = useAtomValue(snapshotsAtom);
+  const sortedSnapshots = useAtomValue(snapshotsAtom);
   const loading = useAtomValue(snapshotsLoadingAtom);
 
   const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const handleClose = () => setIsOpen(false);
-
-  // Sort logic remains here (view logic)
-  const sortedSnapshots = Object.entries(snapshots).sort(
-    (a, b) => b[1].timestamp - a[1].timestamp
-  );
 
   const handleRestore = async (snap: SavedSnapshot) => {
     try {

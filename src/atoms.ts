@@ -7,8 +7,11 @@ const _snapshotsStorageAtom = atom<SnapshotsData>({});
 export const isSnapshotDialogOpenAtom = atom(false);
 export const snapshotsLoadingAtom = atom(true);
 export const snapshotsAtom = atom(
-  (get) => get(_snapshotsStorageAtom),
-  (_, set, newData: SnapshotsData) => {   
+  (get) =>
+    Object.entries(get(_snapshotsStorageAtom)).sort(
+      (a, b) => b[1].timestamp - a[1].timestamp
+    ),
+  (_, set, newData: SnapshotsData) => {
     set(_snapshotsStorageAtom, newData);
     set(snapshotsLoadingAtom, false);
   }
@@ -16,7 +19,7 @@ export const snapshotsAtom = atom(
 
 snapshotsAtom.onMount = (setSelf) => {
   const unsubscribe = DatabaseService.subscribeToSnapshots((data) => {
-    setSelf(data); 
+    setSelf(data);
   });
 
   return () => unsubscribe();
