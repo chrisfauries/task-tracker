@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { useAtomValue } from "jotai"; // Import Jotai hook
-import { isSnapshotDialogOpenAtom } from "./atoms"; // Import atom
+import { useSetAtom } from "jotai";
+import {
+  isAddToCategoryDialogOpenAtom,
+  addToCategoryTargetAtom,
+} from "./atoms";
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin, BackupData } from "./types";
@@ -18,16 +21,25 @@ import { SnapshotDialog } from "./modals/SnapshotDialog";
 import { CategoryDialog } from "./modals/CategoryManagementDialog";
 import { ImportExportDialog } from "./modals/ImportExportDialog";
 import { AddToCategoryDialog } from "./modals/AddToCategoryDialog";
-import { AddWorkerDialog, EditWorkerDialog, DeleteWorkerDialog } from "./modals/WorkerModals";
+import {
+  AddWorkerDialog,
+  EditWorkerDialog,
+  DeleteWorkerDialog,
+} from "./modals/WorkerModals";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
-  
+
   // Custom Hooks
   usePresence(user);
   const { boardData, categories, locks, presence } = useBoardData(user);
-  const { saveSnapshot, trackActivity } = useSnapshots(user, boardData, categories);
-  const { history, future, registerHistory, handleUndo, handleRedo } = useHistory(user, trackActivity);
+  const { saveSnapshot, trackActivity } = useSnapshots(
+    user,
+    boardData,
+    categories
+  );
+  const { history, future, registerHistory, handleUndo, handleRedo } =
+    useHistory(user, trackActivity);
 
   // Local UI State
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
@@ -35,8 +47,12 @@ export default function App() {
   // Modal States
   const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [isImportExportDialogOpen, setIsImportExportDialogOpen] = useState(false);
-  const isSnapshotDialogOpen = useAtomValue(isSnapshotDialogOpenAtom); 
+  const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
+    useState(false);
+
+  // Atom-based Modal States
+  const setAddToCategoryDialogOpen = useSetAtom(isAddToCategoryDialogOpenAtom);
+  const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
 
   // Add Worker State
   const [newWorkerName, setNewWorkerName] = useState("");
@@ -49,12 +65,16 @@ export default function App() {
   const [editWorkerColor, setEditWorkerColor] = useState("Green");
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [workerToDelete, setWorkerToDelete] = useState<{ id: string; name: string; } | null>(null);
+  const [workerToDelete, setWorkerToDelete] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Context Menu State
-  const [contextMenuPos, setContextMenuPos] = useState<{ x: number; y: number; } | null>(null);
-  const [targetNote, setTargetNote] = useState<{ id: string; workerId: string; text: string; } | null>(null);
-  const [isAddToCatDialogOpen, setIsAddToCatDialogOpen] = useState(false);
+  const [contextMenuPos, setContextMenuPos] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
 
   useEffect(() => {
     const handleClick = () => setContextMenuPos(null);
@@ -82,9 +102,14 @@ export default function App() {
 
   const handleLogout = async () => {
     if (user) {
-      const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const timeStr = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
       const dateStr = new Date().toLocaleDateString();
-      await saveSnapshot(`${user.displayName} logged out @ ${timeStr} on ${dateStr}`);
+      await saveSnapshot(
+        `${user.displayName} logged out @ ${timeStr} on ${dateStr}`
+      );
     }
     signOut(auth);
   };
@@ -113,7 +138,10 @@ export default function App() {
     if (!editWorkerName.trim() || !editingWorkerId) return;
 
     trackActivity();
-    await DatabaseService.updateWorker(editingWorkerId, { name: editWorkerName, defaultColor: editWorkerColor });
+    await DatabaseService.updateWorker(editingWorkerId, {
+      name: editWorkerName,
+      defaultColor: editWorkerColor,
+    });
 
     setIsEditWorkerDialogOpen(false);
     setEditingWorkerId(null);
@@ -130,14 +158,23 @@ export default function App() {
     }
   };
 
-  const handleApplyCategory = async (catId: string, workerId: string, colIndex: number) => {
+  const handleApplyCategory = async (
+    catId: string,
+    workerId: string,
+    colIndex: number
+  ) => {
     const category = categories[catId];
     if (!category || !category.items) return;
 
     trackActivity();
     const workerNotes = boardData[workerId]?.notes || {};
     const validPositions = Object.values(workerNotes)
-      .filter((n) => n.column === colIndex && typeof n.position === "number" && !isNaN(n.position))
+      .filter(
+        (n) =>
+          n.column === colIndex &&
+          typeof n.position === "number" &&
+          !isNaN(n.position)
+      )
       .map((n) => n.position);
     const lastPos = validPositions.length > 0 ? Math.max(...validPositions) : 0;
 
@@ -153,39 +190,35 @@ export default function App() {
     }
   };
 
-  const handleNoteContextMenu = (e: React.MouseEvent, noteId: string, workerId: string, text: string) => {
+  const handleNoteContextMenu = (
+    e: React.MouseEvent,
+    noteId: string,
+    workerId: string,
+    text: string
+  ) => {
     e.preventDefault();
-    setTargetNote({ id: noteId, workerId, text });
+    // Set atom state for the dialog target
+    setAddToCategoryTarget({ id: noteId, workerId, text });
+    // Open context menu UI
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
-  const handleAssignCategory = async (catId: string) => {
-    if (!targetNote) return;
-    const category = categories[catId];
-    if (!category) return;
-    trackActivity();
-
-    await DatabaseService.updateNoteCategory(
-      targetNote.workerId,
-      targetNote.id,
-      category.name,
-      category.color || "Green"
-    );
-
-    const currentItems = category.items || [];
-    const newItems = [...currentItems, targetNote.text];
-    await DatabaseService.updateCategory(catId, { items: newItems });
-
-    setIsAddToCatDialogOpen(false);
-    setTargetNote(null);
-  };
-
   const handleExport = () => {
-    const backup: BackupData = { version: 1, timestamp: Date.now(), boardData, categories };
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backup, null, 2));
+    const backup: BackupData = {
+      version: 1,
+      timestamp: Date.now(),
+      boardData,
+      categories,
+    };
+    const dataStr =
+      "data:text/json;charset=utf-8," +
+      encodeURIComponent(JSON.stringify(backup, null, 2));
     const downloadAnchorNode = document.createElement("a");
     downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", `board_backup_${new Date().toISOString().split("T")[0]}.json`);
+    downloadAnchorNode.setAttribute(
+      "download",
+      `board_backup_${new Date().toISOString().split("T")[0]}.json`
+    );
     document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
@@ -201,7 +234,10 @@ export default function App() {
           return;
         }
         trackActivity();
-        await DatabaseService.restoreBackup(json.boardData || {}, json.categories || {});
+        await DatabaseService.restoreBackup(
+          json.boardData || {},
+          json.categories || {}
+        );
         setIsImportExportDialogOpen(false);
         alert("Board restored successfully!");
       } catch (err) {
@@ -218,11 +254,11 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative" style={{ fontFamily: "Georgia, serif" }}>
-
-      <ContextMenu 
-        position={contextMenuPos} 
-        onClose={() => setContextMenuPos(null)} 
-        onAddToCategory={() => setIsAddToCatDialogOpen(true)} 
+      {/* TODO: refactor to jotai next */}
+      <ContextMenu
+        position={contextMenuPos}
+        onClose={() => setContextMenuPos(null)}
+        onAddToCategory={() => setAddToCategoryDialogOpen(true)}
       />
 
       <TopBanner
@@ -233,7 +269,6 @@ export default function App() {
         onUndo={handleUndo}
         onRedo={handleRedo}
         onLogout={handleLogout}
-        // onOpenSnapshots removed
         onOpenImportExport={() => setIsImportExportDialogOpen(true)}
         onOpenCategories={() => setIsCategoryDialogOpen(true)}
         onOpenAddWorker={() => setIsWorkerDialogOpen(true)}
@@ -250,19 +285,58 @@ export default function App() {
         onHistory={registerHistory}
         onNoteContextMenu={handleNoteContextMenu}
         onEditWorker={handleEditWorkerStart}
-        onDeleteWorker={(id, name) => { setWorkerToDelete({ id, name }); setIsDeleteDialogOpen(true); }}
+        onDeleteWorker={(id, name) => {
+          setWorkerToDelete({ id, name });
+          setIsDeleteDialogOpen(true);
+        }}
       />
 
       {/* DIALOGS */}
-      {isAddToCatDialogOpen && <AddToCategoryDialog categories={categories} onClose={() => setIsAddToCatDialogOpen(false)} onSelect={handleAssignCategory} />}
-      {isCategoryDialogOpen && <CategoryDialog categories={categories} boardData={boardData} onClose={() => setIsCategoryDialogOpen(false)} onApply={handleApplyCategory} />}
-      {isImportExportDialogOpen && <ImportExportDialog onClose={() => setIsImportExportDialogOpen(false)} onExport={handleExport} onImport={handleImport} />}
-      
-      {/* SnapshotDialog now closes itself via atom */}
-      {isSnapshotDialogOpen && <SnapshotDialog />}   
-      {isWorkerDialogOpen && <AddWorkerDialog name={newWorkerName} setName={setNewWorkerName} color={newWorkerColor} setColor={setNewWorkerColor} onClose={() => setIsWorkerDialogOpen(false)} onSubmit={handleAddWorker} />}
-      {isEditWorkerDialogOpen && <EditWorkerDialog name={editWorkerName} setName={setEditWorkerName} color={editWorkerColor} setColor={setEditWorkerColor} onClose={() => setIsEditWorkerDialogOpen(false)} onSubmit={handleEditWorkerSave} />}
-      {isDeleteDialogOpen && <DeleteWorkerDialog name={workerToDelete?.name || ""} onClose={() => setIsDeleteDialogOpen(false)} onConfirm={confirmDeleteWorker} />}
+      <AddToCategoryDialog />
+      <SnapshotDialog />
+
+      {isCategoryDialogOpen && (
+        <CategoryDialog
+          categories={categories}
+          boardData={boardData}
+          onClose={() => setIsCategoryDialogOpen(false)}
+          onApply={handleApplyCategory}
+        />
+      )}
+      {isImportExportDialogOpen && (
+        <ImportExportDialog
+          onClose={() => setIsImportExportDialogOpen(false)}
+          onExport={handleExport}
+          onImport={handleImport}
+        />
+      )}
+      {isWorkerDialogOpen && (
+        <AddWorkerDialog
+          name={newWorkerName}
+          setName={setNewWorkerName}
+          color={newWorkerColor}
+          setColor={setNewWorkerColor}
+          onClose={() => setIsWorkerDialogOpen(false)}
+          onSubmit={handleAddWorker}
+        />
+      )}
+      {isEditWorkerDialogOpen && (
+        <EditWorkerDialog
+          name={editWorkerName}
+          setName={setEditWorkerName}
+          color={editWorkerColor}
+          setColor={setEditWorkerColor}
+          onClose={() => setIsEditWorkerDialogOpen(false)}
+          onSubmit={handleEditWorkerSave}
+        />
+      )}
+      {isDeleteDialogOpen && (
+        <DeleteWorkerDialog
+          name={workerToDelete?.name || ""}
+          onClose={() => setIsDeleteDialogOpen(false)}
+          onConfirm={confirmDeleteWorker}
+        />
+      )}
     </div>
   );
 }

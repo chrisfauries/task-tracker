@@ -1,6 +1,6 @@
 import { atom } from "jotai";
 import { DatabaseService } from "./DatabaseService";
-import type { SnapshotsData } from "./types";
+import type { SnapshotsData, CategoriesData, AddToCategoryTarget } from "./types";
 
 // Snapshot Atoms
 const _snapshotsStorageAtom = atom<SnapshotsData>({});
@@ -22,5 +22,21 @@ snapshotsAtom.onMount = (setSelf) => {
     setSelf(data);
   });
 
+  return () => unsubscribe();
+};
+
+// Category Atoms
+const _categoriesStorageAtom = atom<CategoriesData>({});
+export const isAddToCategoryDialogOpenAtom = atom(false);
+export const addToCategoryTargetAtom = atom<AddToCategoryTarget | null>(null);
+export const categoriesAtom = atom(
+  (get) => get(_categoriesStorageAtom),
+  (_, set, newData: CategoriesData) => set(_categoriesStorageAtom, newData)
+);
+
+categoriesAtom.onMount = (setSelf) => {
+  const unsubscribe = DatabaseService.subscribeToCategories((data) => {
+    setSelf(data);
+  });
   return () => unsubscribe();
 };

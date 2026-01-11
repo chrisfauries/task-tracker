@@ -9,6 +9,12 @@ import { DatabaseService } from "../DatabaseService";
 import type { SavedSnapshot } from "../types";
 
 export function SnapshotDialog() {
+  if (!useAtomValue(isSnapshotDialogOpenAtom)) return null;
+
+  return <SnapshotDialogContent />;
+}
+
+function SnapshotDialogContent() {
   const setIsOpen = useSetAtom(isSnapshotDialogOpenAtom);
   const sortedSnapshots = useAtomValue(snapshotsAtom);
   const loading = useAtomValue(snapshotsLoadingAtom);

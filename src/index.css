@@ -5,6 +5,10 @@
   --color-sticky-border: #facc15;
 }
 
+body {
+  font-family: "Georgia, serif";
+}
+
 :root {
   background-color: #f8fafc; /* slate-50 */
   color: #1e293b; /* slate-800 */

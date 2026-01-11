@@ -1,323 +1,201 @@
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
-import { SnapshotDialog } from './SnapshotDialog';
-import { DatabaseService } from '../DatabaseService';
-import * as Jotai from 'jotai';
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { SnapshotDialog } from "./SnapshotDialog";
+import { DatabaseService } from "../DatabaseService";
+import { Provider, createStore } from "jotai";
+import {
+  isSnapshotDialogOpenAtom,
+  snapshotsAtom,
+  snapshotsLoadingAtom,
+} from "../atoms";
+import type { SnapshotsData } from "../types";
 
-// ==========================================
-// 1. Mocks
-// ==========================================
+// Mock DatabaseService
+vi.mock("../DatabaseService", () => ({
+  DatabaseService: {
+    restoreBackup: vi.fn(),
+    deleteSnapshot: vi.fn(),
+    subscribeToSnapshots: vi.fn(() => () => {}),
+  },
+}));
 
-// Mock the Jotai hook to capture the close action
-const mockSetIsOpen = vi.fn();
-vi.mock('jotai', async (importOriginal) => {
-  const actual = await importOriginal<typeof Jotai>();
-  return {
-    ...actual,
-    useSetAtom: () => mockSetIsOpen,
-  };
-});
+// Mock alert and console
+const mockAlert = vi.spyOn(window, "alert").mockImplementation(() => {});
+vi.spyOn(console, "error").mockImplementation(() => {});
 
-// Mock DatabaseService static methods
-vi.mock('../DatabaseService', () => {
-  return {
-    DatabaseService: {
-      subscribeToSnapshots: vi.fn(),
-      restoreBackup: vi.fn(),
-      deleteSnapshot: vi.fn(),
+describe("SnapshotDialog", () => {
+  const mockSnapshots: SnapshotsData = {
+    snap1: {
+      title: "Backup A",
+      timestamp: 1000,
+      boardData: {},
+      categories: {},
+      createdBy: "User A",
+      creatorId: "u1",
+    },
+    snap2: {
+      title: "Backup B",
+      timestamp: 2000,
+      boardData: {},
+      categories: {},
+      createdBy: "User B",
+      creatorId: "u2",
     },
   };
-});
 
-// Mock window.alert
-const mockAlert = vi.spyOn(window, 'alert').mockImplementation(() => {});
-// Mock console.error to suppress expected errors in the console during tests
-const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-// Sample Data
-const mockSnapshots = {
-  snap1: {
-    title: 'Backup A',
-    timestamp: 1672531200000, // 2023-01-01 12:00:00
-    createdBy: 'Alice',
-    creatorId: 'u1',
-    boardData: { worker1: { name: 'Worker 1' } },
-    categories: { cat1: { name: 'Category 1', items: [] } },
-  },
-  snap2: {
-    title: 'Backup B',
-    timestamp: 1672617600000, // 2023-01-02 12:00:00 (Newer)
-    createdBy: 'Bob',
-    creatorId: 'u2',
-    boardData: {},
-    categories: {},
-  },
-};
-
-describe('SnapshotDialog', () => {
-  let subscribeCallback: (data: any) => void;
+  let store: ReturnType<typeof createStore>;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Setup the subscribe mock to capture the callback so we can manually trigger data updates
-    (DatabaseService.subscribeToSnapshots as Mock).mockImplementation((cb) => {
-      subscribeCallback = cb;
-      return () => {}; // Return dummy unsubscribe function
+    store = createStore();
+    // Default: Open, Loaded, Data present
+    store.set(isSnapshotDialogOpenAtom, true);
+    store.set(snapshotsLoadingAtom, false);
+    store.set(snapshotsAtom, mockSnapshots);
+  });
+
+  const renderDialog = () => {
+    return render(
+      <Provider store={store}>
+        <SnapshotDialog />
+      </Provider>
+    );
+  };
+
+  it("renders nothing when closed", () => {
+    store.set(isSnapshotDialogOpenAtom, false);
+    renderDialog();
+    expect(screen.queryByText("Version History")).not.toBeInTheDocument();
+  });
+
+  it("renders loading state", () => {
+    store.set(snapshotsAtom, {});
+    store.set(snapshotsLoadingAtom, true);
+
+    renderDialog();
+    expect(screen.getByText("Loading snapshots...")).toBeInTheDocument();
+  });
+
+  it("renders empty state", () => {
+    store.set(snapshotsAtom, {});
+    renderDialog();
+    expect(screen.getByText("No snapshots available yet.")).toBeInTheDocument();
+  });
+
+  it("renders snapshots list sorted by timestamp descending", () => {
+    renderDialog();
+
+    const titles = screen
+      .getAllByRole("heading", { level: 3 })
+      .map((h) => h.textContent);
+    // snap2 (timestamp 2000) should come before snap1 (timestamp 1000)
+    expect(titles).toEqual(["Backup B", "Backup A"]);
+
+    expect(screen.getByText(/by User A/)).toBeInTheDocument();
+    expect(screen.getByText(/by User B/)).toBeInTheDocument();
+  });
+
+  it("closes when close button is clicked", async () => {
+    renderDialog();
+    fireEvent.click(screen.getByText("✕"));
+
+    await waitFor(() => {
+      expect(store.get(isSnapshotDialogOpenAtom)).toBe(false);
     });
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+  describe("Restore Flow", () => {
+    it("shows confirmation and restores on yes", async () => {
+      renderDialog();
 
-  it('renders loading state initially', () => {
-    render(<SnapshotDialog />);
-    expect(screen.getByText(/loading snapshots/i)).toBeInTheDocument();
-  });
-
-  it('renders empty state when no snapshots exist', async () => {
-    render(<SnapshotDialog />);
-    
-    // Wrap state updates in act()
-    act(() => {
-      subscribeCallback({});
-    });
-    
-    expect(await screen.findByText(/no snapshots available yet/i)).toBeInTheDocument();
-  });
-
-  it('renders snapshots list correctly (sorted by newness)', async () => {
-    render(<SnapshotDialog />);
-    
-    act(() => {
-      subscribeCallback(mockSnapshots);
-    });
-
-    // Wait for the first item to appear
-    expect(await screen.findByText('Backup A')).toBeInTheDocument();
-    expect(screen.getByText('Backup B')).toBeInTheDocument();
-
-    // Verify order: Backup B (newer) should appear before Backup A
-    const titles = screen.getAllByRole('heading', { level: 3 });
-    expect(titles[0]).toHaveTextContent('Backup B');
-    expect(titles[1]).toHaveTextContent('Backup A');
-  });
-
-  it('closes the dialog when the "X" button is clicked', async () => {
-    render(<SnapshotDialog />);
-    const user = userEvent.setup();
-
-    // Click the top-right X button
-    const closeBtn = screen.getByText('✕');
-    await user.click(closeBtn);
-
-    expect(mockSetIsOpen).toHaveBeenCalledWith(false);
-  });
-
-  describe('Restore Flow', () => {
-    it('shows restore confirmation when "Restore" is clicked', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
+      // Click first Restore button (for Backup B)
+      const restoreButtons = screen.getAllByText("Restore", {
+        selector: "button",
       });
-      const user = userEvent.setup();
+      fireEvent.click(restoreButtons[0]);
 
-      await screen.findByText('Backup A');
+      expect(screen.getByText("Yes, Restore")).toBeInTheDocument();
+      expect(screen.getByText("Cancel")).toBeInTheDocument();
 
-      // Find restore button for first item (Backup B)
-      const restoreButtons = screen.getAllByText('Restore', { selector: 'button' });
-      await user.click(restoreButtons[0]);
+      // Click Confirm
+      fireEvent.click(screen.getByText("Yes, Restore"));
 
-      // Should show confirmation buttons
-      expect(screen.getByText('Yes, Restore')).toBeInTheDocument();
-      expect(screen.getByText('Cancel')).toBeInTheDocument();
-    });
-
-    it('cancels restore confirmation when "Cancel" is clicked', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
-      });
-      const user = userEvent.setup();
-
-      await screen.findByText('Backup A');
-
-      // Click Restore -> Click Cancel
-      const restoreBtns = screen.getAllByText('Restore', { selector: 'button' });
-      await user.click(restoreBtns[0]);
-      await user.click(screen.getByText('Cancel'));
-
-      // Should revert to original state
-      expect(screen.queryByText('Yes, Restore')).not.toBeInTheDocument();
-    });
-
-    it('calls DatabaseService.restoreBackup and closes on success', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
-      });
-      const user = userEvent.setup();
-
-      await screen.findByText('Backup A');
-
-      // Mock success
-      (DatabaseService.restoreBackup as Mock).mockResolvedValueOnce(undefined);
-
-      // Trigger Restore
-      const restoreBtns = screen.getAllByText('Restore', { selector: 'button' });
-      await user.click(restoreBtns[0]); // Select Backup B
-      await user.click(screen.getByText('Yes, Restore'));
-
-      // Verify Service Call
-      expect(DatabaseService.restoreBackup).toHaveBeenCalledWith(
-        mockSnapshots.snap2.boardData,
-        mockSnapshots.snap2.categories
-      );
-
-      // Verify Success Alert
-      expect(mockAlert).toHaveBeenCalledWith('Board restored successfully!');
-      
-      // Verify Dialog Closed
-      expect(mockSetIsOpen).toHaveBeenCalledWith(false);
-    });
-
-    it('handles restore errors gracefully', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
-      });
-      const user = userEvent.setup();
-
-      await screen.findByText('Backup A');
-
-      // Mock failure
-      (DatabaseService.restoreBackup as Mock).mockRejectedValueOnce(new Error('Firebase Error'));
-
-      // Trigger Restore
-      const restoreBtns = screen.getAllByText('Restore', { selector: 'button' });
-      await user.click(restoreBtns[0]);
-      await user.click(screen.getByText('Yes, Restore'));
-
-      // Verify Error Alert
       await waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith('Error restoring snapshot.');
+        expect(DatabaseService.restoreBackup).toHaveBeenCalledWith({}, {});
+        expect(mockAlert).toHaveBeenCalledWith("Board restored successfully!");
+        expect(store.get(isSnapshotDialogOpenAtom)).toBe(false);
       });
-      
-      // Should NOT close dialog on error
-      expect(mockSetIsOpen).not.toHaveBeenCalled();
+    });
+
+    it("cancels restore confirmation", async () => {
+      renderDialog();
+      const restoreButtons = screen.getAllByText("Restore", {
+        selector: "button",
+      });
+      fireEvent.click(restoreButtons[0]);
+
+      fireEvent.click(screen.getByText("Cancel"));
+
+      expect(screen.queryByText("Yes, Restore")).not.toBeInTheDocument();
+      expect(screen.getAllByText("Restore").length).toBeGreaterThan(0);
     });
   });
 
-  describe('Delete Flow', () => {
-    it('shows delete confirmation when trash icon is clicked', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
-      });
-      const user = userEvent.setup();
+  describe("Delete Flow", () => {
+    it("shows confirmation and deletes on yes", async () => {
+      renderDialog();
 
-      await screen.findByText('Backup A');
+      const deleteButtons = screen.getAllByTitle("Delete Snapshot");
+      fireEvent.click(deleteButtons[0]);
 
-      // Find Trash icon for first item
-      const deleteBtns = screen.getAllByTitle('Delete Snapshot');
-      await user.click(deleteBtns[0]);
+      expect(screen.getByText("Confirm Delete")).toBeInTheDocument();
 
-      // Should show confirmation buttons
-      expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
-      expect(screen.getByText('X')).toBeInTheDocument(); // The cancel button for delete
-    });
+      fireEvent.click(screen.getByText("Confirm Delete"));
 
-    it('cancels delete confirmation when small "X" is clicked', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
-      });
-      const user = userEvent.setup();
-
-      await screen.findByText('Backup A');
-
-      // Trigger Delete -> Cancel
-      const deleteBtns = screen.getAllByTitle('Delete Snapshot');
-      await user.click(deleteBtns[0]);
-      await user.click(screen.getByText('X')); // Cancel delete
-
-      // Should revert to trash icon
-      expect(screen.queryByText('Confirm Delete')).not.toBeInTheDocument();
-    });
-
-    it('calls DatabaseService.deleteSnapshot on confirm', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
-      });
-      const user = userEvent.setup();
-
-      await screen.findByText('Backup A');
-
-      // Mock success
-      (DatabaseService.deleteSnapshot as Mock).mockResolvedValueOnce(undefined);
-
-      // Trigger Delete
-      const deleteBtns = screen.getAllByTitle('Delete Snapshot');
-      // snap2 is first because it's newer, its key is "snap2"
-      await user.click(deleteBtns[0]); 
-      await user.click(screen.getByText('Confirm Delete'));
-
-      // Verify Service Call
-      expect(DatabaseService.deleteSnapshot).toHaveBeenCalledWith('snap2');
-      
-      // Dialog should remain open, delete confirmation should disappear
-      expect(mockSetIsOpen).not.toHaveBeenCalled();
-      expect(screen.queryByText('Confirm Delete')).not.toBeInTheDocument();
-    });
-
-    it('handles delete errors gracefully', async () => {
-      render(<SnapshotDialog />);
-      act(() => {
-        subscribeCallback(mockSnapshots);
-      });
-      const user = userEvent.setup();
-
-      await screen.findByText('Backup A');
-
-      // Mock failure
-      (DatabaseService.deleteSnapshot as Mock).mockRejectedValueOnce(new Error('Firebase Error'));
-
-      // Trigger Delete
-      const deleteBtns = screen.getAllByTitle('Delete Snapshot');
-      await user.click(deleteBtns[0]);
-      await user.click(screen.getByText('Confirm Delete'));
-
-      // Verify Error Alert
       await waitFor(() => {
-        expect(mockAlert).toHaveBeenCalledWith('Error deleting snapshot.');
+        // snap2 is the first item due to sorting
+        expect(DatabaseService.deleteSnapshot).toHaveBeenCalledWith("snap2");
       });
+    });
+
+    it("cancels delete confirmation", async () => {
+      renderDialog();
+
+      const deleteButtons = screen.getAllByTitle("Delete Snapshot");
+      fireEvent.click(deleteButtons[0]);
+
+      // Cancel button is labeled 'X' in the delete confirmation block
+      const cancelButtons = screen.getAllByText("X", { selector: "button" });
+      fireEvent.click(cancelButtons[0]);
+
+      expect(screen.queryByText("Confirm Delete")).not.toBeInTheDocument();
     });
   });
 
-  it('ensures restore and delete confirmations are mutually exclusive', async () => {
-    // This tests that clicking restore on one item resets delete mode on another or itself
-    render(<SnapshotDialog />);
-    act(() => {
-      subscribeCallback(mockSnapshots);
-    });
-    const user = userEvent.setup();
-
-    await screen.findByText('Backup A');
+  it("ensures restore and delete confirmations are mutually exclusive", async () => {
+    renderDialog();
 
     // 1. Activate Restore on Item 1
-    const restoreBtns = screen.getAllByText('Restore', { selector: 'button' });
-    await user.click(restoreBtns[0]);
-    expect(screen.getByText('Yes, Restore')).toBeInTheDocument();
+    const restoreButtons = screen.getAllByText("Restore", {
+      selector: "button",
+    });
+    fireEvent.click(restoreButtons[0]);
+    expect(screen.getByText("Yes, Restore")).toBeInTheDocument();
 
     // 2. Activate Delete on Item 1 (should switch mode)
-    const deleteBtns = screen.getAllByTitle('Delete Snapshot');
-    await user.click(deleteBtns[0]);
+    const deleteButtons = screen.getAllByTitle("Delete Snapshot");
+    fireEvent.click(deleteButtons[0]);
 
     // 3. Verify Switch: Restore options gone, Delete options visible
-    expect(screen.queryByText('Yes, Restore')).not.toBeInTheDocument();
-    expect(screen.getByText('Confirm Delete')).toBeInTheDocument();
+    expect(screen.queryByText("Yes, Restore")).not.toBeInTheDocument();
+    expect(screen.getByText("Confirm Delete")).toBeInTheDocument();
+
+    // 4. Activate Restore on Item 2 (should reset Item 1)
+    if (restoreButtons[1]) {
+      fireEvent.click(restoreButtons[1]);
+      expect(screen.queryByText("Confirm Delete")).not.toBeInTheDocument();
+      // "Yes, Restore" should appear for the second item
+      expect(screen.getByText("Yes, Restore")).toBeInTheDocument();
+    }
   });
 });

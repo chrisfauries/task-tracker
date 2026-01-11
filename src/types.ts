@@ -96,3 +96,9 @@ export interface BackupData {
   boardData: BoardData;
   categories: CategoriesData;
 }
+
+export interface AddToCategoryTarget {
+  id: string;
+  workerId: string;
+  text: string;
+}
