@@ -3,6 +3,9 @@
 @theme {
   --color-sticky-yellow: #fef9c3;
   --color-sticky-border: #facc15;
+
+  /* Custom User Colors for Notes/Categories */
+  --color-user-1: var(--user-color, #f87171); 
 }
 
 body {

@@ -30,6 +30,7 @@ import {
   isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
 } from "./atoms";
+import { CustomColorsDialog } from "./modals/CustomColorDialog";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -225,6 +226,16 @@ export default function App() {
         onApply={handleApplyCategory}
       />
 
+      <CustomColorsDialog onClose={() =>{}}/>
+
+      {isCategoryDialogOpen && (
+        <CategoryDialog
+          categories={categories}
+          boardData={boardData}
+          onClose={() => setIsCategoryDialogOpen(false)}
+          onApply={handleApplyCategory}
+        />
+      )}
       {isImportExportDialogOpen && (
         <ImportExportDialog
           onClose={() => setIsImportExportDialogOpen(false)}
@@ -234,4 +245,4 @@ export default function App() {
       )}
     </div>
   );
-}
+};
