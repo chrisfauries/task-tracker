@@ -74,17 +74,11 @@ describe("AddToCategoryDialog", () => {
     expect(screen.getByText(/No categories available/i)).toBeInTheDocument();
   });
 
-  it("closes when close button is clicked", () => {
+  it("closes when close button is clicked", async () => {
     renderDialog();
     const closeBtn = screen.getByText("✕");
     fireEvent.click(closeBtn);
-    expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
-  });
-
-  it("closes when close button is clicked", async () => {
-    renderDialog();
-    fireEvent.click(screen.getByText("✕"));
-
+    
     await waitFor(() => {
       expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
     });
@@ -129,10 +123,13 @@ describe("AddToCategoryDialog", () => {
     fireEvent.click(createBtn);
 
     // Expect create call with default color "Green"
-    expect(DatabaseService.createCategory).toHaveBeenCalledWith(
-      "Urgent",
-      "Green"
-    );
+    await waitFor(() => {
+        expect(DatabaseService.createCategory).toHaveBeenCalledWith(
+            "Urgent",
+            "Green"
+        );
+    });
+    
     expect(createBtn).toHaveTextContent("Creating...");
     expect(createBtn).toBeDisabled();
 
@@ -168,23 +165,27 @@ describe("AddToCategoryDialog", () => {
     fireEvent.change(input, { target: { value: "Blue Team" } });
     fireEvent.click(screen.getByText("Create and Add"));
 
-    expect(DatabaseService.createCategory).toHaveBeenCalledWith(
-      "Blue Team",
-      "Blue"
-    );
+    await waitFor(() => {
+        expect(DatabaseService.createCategory).toHaveBeenCalledWith(
+        "Blue Team",
+        "Blue"
+        );
+    });
   });
 
-  it("creates category on Enter key press", () => {
+  it("creates category on Enter key press", async () => {
     renderDialog();
     const input = screen.getByPlaceholderText("Category Name");
     fireEvent.change(input, { target: { value: "Enter Cat" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter", charCode: 13 });
 
     // Expect default color "Green"
-    expect(DatabaseService.createCategory).toHaveBeenCalledWith(
-      "Enter Cat",
-      "Green"
-    );
+    await waitFor(() => {
+        expect(DatabaseService.createCategory).toHaveBeenCalledWith(
+        "Enter Cat",
+        "Green"
+        );
+    });
   });
 
   it("does not create category on Enter if input is empty", () => {

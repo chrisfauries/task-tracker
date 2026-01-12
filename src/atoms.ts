@@ -27,6 +27,7 @@ snapshotsAtom.onMount = (setSelf) => {
 
 // Category Atoms
 const _categoriesStorageAtom = atom<CategoriesData>({});
+export const isCategoryManagementDialogOpenAtom = atom(false);
 export const isAddToCategoryDialogOpenAtom = atom(false);
 export const addToCategoryTargetAtom = atom<AddToCategoryTarget | null>(null);
 export const categoriesAtom = atom(
@@ -45,3 +46,13 @@ categoriesAtom.onMount = (setSelf) => {
 // Context Menu State
 export const contextMenuPosAtom = atom<{ x: number; y: number } | null>(null);
 export const appSettingsMenuPosAtom = atom<{ x: number; y: number } | null>(null);
+
+// Worker Modal Atoms
+export const isAddWorkerDialogOpenAtom = atom(false);
+
+export const isEditWorkerDialogOpenAtom = atom(false);
+export const editingWorkerAtom = atom<{ id: string; name: string; color: string } | null>(null);
+
+export const isDeleteWorkerDialogOpenAtom = atom(false);
+export const workerToDeleteAtom = atom<{ id: string; name: string } | null>(null);
+

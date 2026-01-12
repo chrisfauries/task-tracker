@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
+import { useSetAtom } from "jotai";
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin, BackupData } from "./types";
@@ -14,7 +15,7 @@ import { ContextMenu } from "./ContextMenu";
 import { AppSettingsMenu } from "./AppSettingsMenu";
 import { Login } from "./Login";
 import { SnapshotDialog } from "./modals/SnapshotDialog";
-import { CategoryDialog } from "./modals/CategoryManagementDialog";
+import { CategoryManagementDialog } from "./modals/CategoryManagementDialog";
 import { ImportExportDialog } from "./modals/ImportExportDialog";
 import { AddToCategoryDialog } from "./modals/AddToCategoryDialog";
 import {
@@ -22,6 +23,13 @@ import {
   EditWorkerDialog,
   DeleteWorkerDialog,
 } from "./modals/WorkerModals";
+import {
+  isAddWorkerDialogOpenAtom,
+  isEditWorkerDialogOpenAtom,
+  editingWorkerAtom,
+  isDeleteWorkerDialogOpenAtom,
+  workerToDeleteAtom,
+} from "./atoms";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -41,26 +49,13 @@ export default function App() {
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
   // Modal States
-  const [isWorkerDialogOpen, setIsWorkerDialogOpen] = useState(false);
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const setIsAddWorkerDialogOpen = useSetAtom(isAddWorkerDialogOpenAtom);
+  const setIsEditWorkerDialogOpen = useSetAtom(isEditWorkerDialogOpenAtom);
+  const setEditingWorker = useSetAtom(editingWorkerAtom);
+  const setIsDeleteWorkerDialogOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
+  const setWorkerToDelete = useSetAtom(workerToDeleteAtom);
   const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
     useState(false);
-
-  // Add Worker State
-  const [newWorkerName, setNewWorkerName] = useState("");
-  const [newWorkerColor, setNewWorkerColor] = useState("Green");
-
-  // Worker Edit State
-  const [isEditWorkerDialogOpen, setIsEditWorkerDialogOpen] = useState(false);
-  const [editingWorkerId, setEditingWorkerId] = useState<string | null>(null);
-  const [editWorkerName, setEditWorkerName] = useState("");
-  const [editWorkerColor, setEditWorkerColor] = useState("Green");
-
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [workerToDelete, setWorkerToDelete] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -94,48 +89,10 @@ export default function App() {
     signOut(auth);
   };
 
-  const handleAddWorker = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newWorkerName.trim()) return;
-
-    trackActivity();
-    await DatabaseService.createWorker(newWorkerName, newWorkerColor);
-
-    setNewWorkerName("");
-    setNewWorkerColor("Green");
-    setIsWorkerDialogOpen(false);
-  };
-
   const handleEditWorkerStart = (id: string, currentName: string) => {
-    setEditingWorkerId(id);
-    setEditWorkerName(currentName);
-    setEditWorkerColor(boardData[id]?.defaultColor || "Green");
+    const currentColor = boardData[id]?.defaultColor || "Green";
+    setEditingWorker({ id, name: currentName, color: currentColor });
     setIsEditWorkerDialogOpen(true);
-  };
-
-  const handleEditWorkerSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editWorkerName.trim() || !editingWorkerId) return;
-
-    trackActivity();
-    await DatabaseService.updateWorker(editingWorkerId, {
-      name: editWorkerName,
-      defaultColor: editWorkerColor,
-    });
-
-    setIsEditWorkerDialogOpen(false);
-    setEditingWorkerId(null);
-    setEditWorkerName("");
-    setEditWorkerColor("Green");
-  };
-
-  const confirmDeleteWorker = async () => {
-    if (workerToDelete) {
-      trackActivity();
-      await DatabaseService.deleteWorker(workerToDelete.id);
-      setIsDeleteDialogOpen(false);
-      setWorkerToDelete(null);
-    }
   };
 
   const handleApplyCategory = async (
@@ -224,13 +181,12 @@ export default function App() {
       className="h-screen flex flex-col bg-slate-50 overflow-hidden relative"
       style={{ fontFamily: "Georgia, serif" }}
     >
-
       <ContextMenu />
+
       <AppSettingsMenu
         onLogout={handleLogout}
         onOpenImportExport={() => setIsImportExportDialogOpen(true)}
-        onOpenCategories={() => setIsCategoryDialogOpen(true)}
-        onOpenAddWorker={() => setIsWorkerDialogOpen(true)}
+        onOpenAddWorker={() => setIsAddWorkerDialogOpen(true)}
       />
 
       <TopBanner
@@ -254,54 +210,26 @@ export default function App() {
         onEditWorker={handleEditWorkerStart}
         onDeleteWorker={(id, name) => {
           setWorkerToDelete({ id, name });
-          setIsDeleteDialogOpen(true);
+          setIsDeleteWorkerDialogOpen(true);
         }}
       />
 
       {/* DIALOGS */}
       <AddToCategoryDialog />
       <SnapshotDialog />
+      <AddWorkerDialog />
+      <EditWorkerDialog />
+      <DeleteWorkerDialog />
+      <CategoryManagementDialog
+        boardData={boardData}
+        onApply={handleApplyCategory}
+      />
 
-      {isCategoryDialogOpen && (
-        <CategoryDialog
-          categories={categories}
-          boardData={boardData}
-          onClose={() => setIsCategoryDialogOpen(false)}
-          onApply={handleApplyCategory}
-        />
-      )}
       {isImportExportDialogOpen && (
         <ImportExportDialog
           onClose={() => setIsImportExportDialogOpen(false)}
           onExport={handleExport}
           onImport={handleImport}
-        />
-      )}
-      {isWorkerDialogOpen && (
-        <AddWorkerDialog
-          name={newWorkerName}
-          setName={setNewWorkerName}
-          color={newWorkerColor}
-          setColor={setNewWorkerColor}
-          onClose={() => setIsWorkerDialogOpen(false)}
-          onSubmit={handleAddWorker}
-        />
-      )}
-      {isEditWorkerDialogOpen && (
-        <EditWorkerDialog
-          name={editWorkerName}
-          setName={setEditWorkerName}
-          color={editWorkerColor}
-          setColor={setEditWorkerColor}
-          onClose={() => setIsEditWorkerDialogOpen(false)}
-          onSubmit={handleEditWorkerSave}
-        />
-      )}
-      {isDeleteDialogOpen && (
-        <DeleteWorkerDialog
-          name={workerToDelete?.name || ""}
-          onClose={() => setIsDeleteDialogOpen(false)}
-          onConfirm={confirmDeleteWorker}
         />
       )}
     </div>

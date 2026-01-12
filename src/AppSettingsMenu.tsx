@@ -1,21 +1,20 @@
 import { useAtom, useSetAtom } from "jotai";
-import { appSettingsMenuPosAtom, isSnapshotDialogOpenAtom } from "./atoms";
+import { appSettingsMenuPosAtom, isSnapshotDialogOpenAtom, isCategoryManagementDialogOpenAtom } from "./atoms";
 
 interface AppSettingsMenuProps {
   onLogout: () => void;
   onOpenImportExport: () => void;
-  onOpenCategories: () => void;
   onOpenAddWorker: () => void;
 }
 
 export const AppSettingsMenu = ({
   onLogout,
   onOpenImportExport,
-  onOpenCategories,
   onOpenAddWorker,
 }: AppSettingsMenuProps) => {
   const [position, setPosition] = useAtom(appSettingsMenuPosAtom);
   const setIsSnapshotOpen = useSetAtom(isSnapshotDialogOpenAtom);
+  const setIsCategoryDialogOpen = useSetAtom(isCategoryManagementDialogOpenAtom);
 
   if (!position) return null;
 
@@ -38,7 +37,7 @@ export const AppSettingsMenu = ({
         }}
       >
         <button
-          onClick={() => handleAction(onOpenCategories)}
+          onClick={() => handleAction(() => setIsCategoryDialogOpen(true))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700"
         >
           Categories
