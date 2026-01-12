@@ -11,6 +11,7 @@ import { useHistory } from "./hooks/useHistory";
 import { TopBanner } from "./TopBanner";
 import { Board } from "./Board";
 import { ContextMenu } from "./ContextMenu";
+import { AppSettingsMenu } from "./AppSettingsMenu";
 import { Login } from "./Login";
 import { SnapshotDialog } from "./modals/SnapshotDialog";
 import { CategoryDialog } from "./modals/CategoryManagementDialog";
@@ -225,6 +226,12 @@ export default function App() {
     >
 
       <ContextMenu />
+      <AppSettingsMenu
+        onLogout={handleLogout}
+        onOpenImportExport={() => setIsImportExportDialogOpen(true)}
+        onOpenCategories={() => setIsCategoryDialogOpen(true)}
+        onOpenAddWorker={() => setIsWorkerDialogOpen(true)}
+      />
 
       <TopBanner
         user={user}
@@ -233,10 +240,6 @@ export default function App() {
         presence={presence}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        onLogout={handleLogout}
-        onOpenImportExport={() => setIsImportExportDialogOpen(true)}
-        onOpenCategories={() => setIsCategoryDialogOpen(true)}
-        onOpenAddWorker={() => setIsWorkerDialogOpen(true)}
       />
 
       <Board

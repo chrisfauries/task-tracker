@@ -20,6 +20,7 @@ export function CategoryDialog({
   const [newCatName, setNewCatName] = useState("");
 
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
 
   const [focusNewItemIndex, setFocusNewItemIndex] = useState<number | null>(null);
@@ -51,6 +52,7 @@ export function CategoryDialog({
     e.stopPropagation();
     setEditingCatId(id);
     setRenameValue(currentName);
+    setDeletingCatId(null);
   };
 
   const saveRename = async (e: React.MouseEvent, id: string) => {
@@ -109,6 +111,32 @@ export function CategoryDialog({
                       <button onClick={(e) => saveRename(e, id)} className="text-green-600 font-bold hover:bg-green-50 p-1 rounded">✓</button>
                       <button onClick={cancelRename} className="text-slate-400 font-bold hover:bg-slate-100 p-1 rounded">✕</button>
                     </div>
+                  ) : deletingCatId === id ? (
+                    <div className="flex items-center justify-between w-full">
+                      <span className="text-sm font-bold text-red-600">Delete this?</span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await DatabaseService.deleteCategory(id);
+                            if (selectedId === id) setSelectedId(null);
+                            setDeletingCatId(null);
+                          }}
+                          className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-bold hover:bg-red-200"
+                        >
+                          Yes
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDeletingCatId(null);
+                          }}
+                          className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded font-bold hover:bg-slate-200"
+                        >
+                          No
+                        </button>
+                      </div>
+                    </div>
                   ) : (
                     <>
                       <div className="flex items-center gap-3">
@@ -118,10 +146,10 @@ export function CategoryDialog({
                       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={(e) => startRenaming(e, id, cat.name)} className="text-slate-400 hover:text-blue-600" title="Rename">✏️</button>
                         <button
-                          onClick={async (e) => {
+                          onClick={(e) => {
                             e.stopPropagation();
-                            await DatabaseService.deleteCategory(id);
-                            if (selectedId === id) setSelectedId(null);
+                            setDeletingCatId(id);
+                            setEditingCatId(null);
                           }}
                           className="text-red-400 hover:text-red-600"
                           title="Delete"
@@ -137,7 +165,7 @@ export function CategoryDialog({
           </div>
 
           <div className="flex-1 p-8 bg-white overflow-y-auto">
-            {selectedId ? (
+            {selectedId && categories[selectedId] ? (
               <div className="space-y-8">
                 <section>
                   <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Category Color</h3>

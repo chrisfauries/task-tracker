@@ -1,10 +1,9 @@
 import type { User } from "firebase/auth";
 import type { HistoryAction, AllPresenceData } from "./types";
 import { UndoRedoControls } from "./UndoRedoControls";
-import { Button } from "./Button";
 import { AvatarList } from "./AvatarList";
 import { useSetAtom } from "jotai";
-import { isSnapshotDialogOpenAtom } from "./atoms";
+import { appSettingsMenuPosAtom } from "./atoms";
 
 interface TopBannerProps {
   user: User | null;
@@ -13,10 +12,6 @@ interface TopBannerProps {
   presence: AllPresenceData;
   onUndo: () => void;
   onRedo: () => void;
-  onLogout: () => void;
-  onOpenImportExport: () => void;
-  onOpenCategories: () => void;
-  onOpenAddWorker: () => void;
 }
 
 export function TopBanner({
@@ -25,12 +20,8 @@ export function TopBanner({
   presence,
   onUndo,
   onRedo,
-  onLogout,
-  onOpenImportExport,
-  onOpenCategories,
-  onOpenAddWorker,
 }: TopBannerProps) {
-  const setIsSnapshotOpen = useSetAtom(isSnapshotDialogOpenAtom);
+  const setAppSettingsMenuPos = useSetAtom(appSettingsMenuPosAtom);
 
   return (
     <div className="p-4 border-b bg-white z-50 grid grid-cols-3 items-center shadow-sm">
@@ -59,29 +50,30 @@ export function TopBanner({
           className="mr-4 border-r pr-4 border-slate-200"
         />
 
-        <Button
-          onClick={() => setIsSnapshotOpen(true)}
-          variant="secondary"
-          className="flex items-center gap-2"
+        <button
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setAppSettingsMenuPos({ x: rect.left, y: rect.bottom + 8 });
+          }}
+          className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all"
+          title="Menu"
         >
-          <span>⏱️</span> Snapshots
-        </Button>
-
-        <Button onClick={onOpenImportExport} variant="secondary">
-          Import/Export
-        </Button>
-
-        <Button onClick={onOpenCategories} variant="primary">
-          Categories
-        </Button>
-
-        <Button onClick={onOpenAddWorker} variant="success">
-          Add Worker
-        </Button>
-
-        <Button onClick={onLogout} variant="neutral">
-          Logout
-        </Button>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
       </div>
     </div>
   );

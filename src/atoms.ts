@@ -44,3 +44,4 @@ categoriesAtom.onMount = (setSelf) => {
 
 // Context Menu State
 export const contextMenuPosAtom = atom<{ x: number; y: number } | null>(null);
+export const appSettingsMenuPosAtom = atom<{ x: number; y: number } | null>(null);
