@@ -22,6 +22,7 @@ import {
   EditWorkerDialog,
   DeleteWorkerDialog,
 } from "./modals/WorkerModals";
+import { CustomColorsDialog } from "./modals/CustomColorDialog";
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -261,6 +262,8 @@ export default function App() {
       {/* DIALOGS */}
       <AddToCategoryDialog />
       <SnapshotDialog />
+
+      <CustomColorsDialog onClose={() =>{}}/>
 
       {isCategoryDialogOpen && (
         <CategoryDialog
