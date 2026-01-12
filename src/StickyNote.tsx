@@ -4,6 +4,8 @@ import { COLOR_MATRIX } from "./constants";
 import type { User } from "firebase/auth";
 import type { LocksData, HistoryAction } from "./types";
 import { NoteMenu } from "./NoteMenu";
+import { useSetAtom } from "jotai";
+import { addToCategoryTargetAtom, contextMenuPosAtom } from "./atoms";
 
 interface StickyNoteProps {
   id: string;
@@ -30,12 +32,6 @@ interface StickyNoteProps {
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
-  onContextMenu: (
-    e: React.MouseEvent,
-    noteId: string,
-    workerId: string,
-    text: string
-  ) => void;
 }
 
 export function StickyNote({
@@ -57,8 +53,9 @@ export function StickyNote({
   currentUser,
   onActivity,
   onHistory,
-  onContextMenu,
 }: StickyNoteProps) {
+  const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
+  const setContextMenuPos = useSetAtom(contextMenuPosAtom);
   const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
     null
   );
@@ -215,7 +212,8 @@ export function StickyNote({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onContextMenu?.(e, id, workerId, text);
+    setAddToCategoryTarget({ id, workerId, text });
+    setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {

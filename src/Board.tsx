@@ -1,4 +1,3 @@
-import React from "react";
 import { WorkerRow } from "./WorkerRow";
 import type { User } from "firebase/auth";
 import type {
@@ -18,12 +17,6 @@ interface BoardProps {
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
-  onNoteContextMenu: (
-    e: React.MouseEvent,
-    noteId: string,
-    workerId: string,
-    text: string
-  ) => void;
   onEditWorker: (id: string, name: string) => void;
   onDeleteWorker: (id: string, name: string) => void;
 }
@@ -37,7 +30,6 @@ export function Board({
   currentUser,
   onActivity,
   onHistory,
-  onNoteContextMenu,
   onEditWorker,
   onDeleteWorker,
 }: BoardProps) {
@@ -70,7 +62,6 @@ export function Board({
             currentUser={currentUser}
             onActivity={onActivity}
             onHistory={onHistory}
-            onNoteContextMenu={onNoteContextMenu}
             onEditWorker={onEditWorker}
             onDeleteWorker={onDeleteWorker}
           />

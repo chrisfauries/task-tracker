@@ -1,11 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { useSetAtom } from "jotai";
-import {
-  isAddToCategoryDialogOpenAtom,
-  addToCategoryTargetAtom,
-} from "./atoms";
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin, BackupData } from "./types";
@@ -50,10 +45,6 @@ export default function App() {
   const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
     useState(false);
 
-  // Atom-based Modal States
-  const setAddToCategoryDialogOpen = useSetAtom(isAddToCategoryDialogOpenAtom);
-  const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
-
   // Add Worker State
   const [newWorkerName, setNewWorkerName] = useState("");
   const [newWorkerColor, setNewWorkerColor] = useState("Green");
@@ -69,18 +60,6 @@ export default function App() {
     id: string;
     name: string;
   } | null>(null);
-
-  // Context Menu State
-  const [contextMenuPos, setContextMenuPos] = useState<{
-    x: number;
-    y: number;
-  } | null>(null);
-
-  useEffect(() => {
-    const handleClick = () => setContextMenuPos(null);
-    window.addEventListener("click", handleClick);
-    return () => window.removeEventListener("click", handleClick);
-  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -190,19 +169,6 @@ export default function App() {
     }
   };
 
-  const handleNoteContextMenu = (
-    e: React.MouseEvent,
-    noteId: string,
-    workerId: string,
-    text: string
-  ) => {
-    e.preventDefault();
-    // Set atom state for the dialog target
-    setAddToCategoryTarget({ id: noteId, workerId, text });
-    // Open context menu UI
-    setContextMenuPos({ x: e.clientX, y: e.clientY });
-  };
-
   const handleExport = () => {
     const backup: BackupData = {
       version: 1,
@@ -253,13 +219,12 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50 overflow-hidden relative" style={{ fontFamily: "Georgia, serif" }}>
-      {/* TODO: refactor to jotai next */}
-      <ContextMenu
-        position={contextMenuPos}
-        onClose={() => setContextMenuPos(null)}
-        onAddToCategory={() => setAddToCategoryDialogOpen(true)}
-      />
+    <div
+      className="h-screen flex flex-col bg-slate-50 overflow-hidden relative"
+      style={{ fontFamily: "Georgia, serif" }}
+    >
+
+      <ContextMenu />
 
       <TopBanner
         user={user}
@@ -283,7 +248,6 @@ export default function App() {
         currentUser={user}
         onActivity={trackActivity}
         onHistory={registerHistory}
-        onNoteContextMenu={handleNoteContextMenu}
         onEditWorker={handleEditWorkerStart}
         onDeleteWorker={(id, name) => {
           setWorkerToDelete({ id, name });

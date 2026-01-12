@@ -18,12 +18,6 @@ interface DropZoneProps {
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
-  onNoteContextMenu: (
-    e: React.MouseEvent,
-    noteId: string,
-    workerId: string,
-    text: string
-  ) => void;
 }
 
 export function DropZone({
@@ -38,7 +32,6 @@ export function DropZone({
   currentUser,
   onActivity,
   onHistory,
-  onNoteContextMenu,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
@@ -220,7 +213,6 @@ export function DropZone({
             currentUser={currentUser}
             onActivity={onActivity}
             onHistory={onHistory}
-            onContextMenu={onNoteContextMenu}
           />
         ))}
 

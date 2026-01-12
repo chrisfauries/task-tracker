@@ -1,3 +1,9 @@
+declare global {
+  interface MouseEvent {
+    isWithinContextMenu?: boolean;
+  }
+}
+
 export interface Note {
   text: string;
   column: number;

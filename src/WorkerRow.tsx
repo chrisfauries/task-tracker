@@ -15,12 +15,6 @@ interface WorkerRowProps {
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
-  onNoteContextMenu: (
-    e: React.MouseEvent,
-    noteId: string,
-    workerId: string,
-    text: string
-  ) => void;
   onEditWorker: (id: string, name: string) => void;
   onDeleteWorker: (id: string, name: string) => void;
 }
@@ -35,7 +29,6 @@ export function WorkerRow({
   currentUser,
   onActivity,
   onHistory,
-  onNoteContextMenu,
   onEditWorker,
   onDeleteWorker,
 }: WorkerRowProps) {
@@ -60,7 +53,6 @@ export function WorkerRow({
             dragOrigin={dragOrigin}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
-            onNoteContextMenu={onNoteContextMenu}
             locks={locks}
             currentUser={currentUser}
             onActivity={onActivity}

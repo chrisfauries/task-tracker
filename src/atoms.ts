@@ -40,3 +40,7 @@ categoriesAtom.onMount = (setSelf) => {
   });
   return () => unsubscribe();
 };
+
+
+// Context Menu State
+export const contextMenuPosAtom = atom<{ x: number; y: number } | null>(null);
