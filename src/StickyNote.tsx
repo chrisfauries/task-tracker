@@ -212,7 +212,7 @@ export function StickyNote({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setAddToCategoryTarget({ id, workerId, text });
+    setAddToCategoryTarget({ id, workerId, text, color });
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 

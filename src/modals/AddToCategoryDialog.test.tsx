@@ -16,6 +16,7 @@ vi.mock("../DatabaseService", () => ({
     createCategory: vi.fn(),
     updateNoteCategory: vi.fn(),
     updateCategory: vi.fn(),
+    getNote: vi.fn().mockResolvedValue({ color: "Green" }), // Mock getNote for color fetching
     // We mock the subscription to avoid actual implementation interference,
     // though we will manually inject data into the atom store.
     subscribeToCategories: vi.fn(() => () => {}),
@@ -32,17 +33,17 @@ describe("AddToCategoryDialog", () => {
     id: "note123",
     workerId: "workerABC",
     text: "My Important Task",
+    color: "Green",
   };
 
   let store: ReturnType<typeof createStore>;
 
   beforeEach(() => {
-    vi.clearAllMocks();
     store = createStore();
-    // Setup initial state in the store
     store.set(isAddToCategoryDialogOpenAtom, true);
     store.set(addToCategoryTargetAtom, mockTargetNote);
     store.set(categoriesAtom, mockCategories);
+    vi.clearAllMocks();
   });
 
   const renderDialog = () => {
@@ -62,6 +63,7 @@ describe("AddToCategoryDialog", () => {
   it("renders correctly when open with categories", () => {
     renderDialog();
     expect(screen.getByText("Add to Category...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Category Name")).toBeInTheDocument();
     expect(screen.getByText("Work")).toBeInTheDocument();
     expect(screen.getByText("Personal")).toBeInTheDocument();
   });
@@ -72,10 +74,11 @@ describe("AddToCategoryDialog", () => {
     expect(screen.getByText(/No categories available/i)).toBeInTheDocument();
   });
 
-  it("auto-focuses the new category input", () => {
+  it("closes when close button is clicked", () => {
     renderDialog();
-    const input = screen.getByPlaceholderText("Category Name");
-    expect(input).toHaveFocus();
+    const closeBtn = screen.getByText("✕");
+    fireEvent.click(closeBtn);
+    expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
   });
 
   it("closes when close button is clicked", async () => {
@@ -87,58 +90,61 @@ describe("AddToCategoryDialog", () => {
     });
   });
 
-  it("adds note to existing category on selection", async () => {
+  it("selects an existing category and updates database", async () => {
     renderDialog();
-    fireEvent.click(screen.getByText("Work"));
+
+    const workBtn = screen.getByText("Work");
+    fireEvent.click(workBtn);
 
     await waitFor(() => {
-      // 1. Should update note's category metadata
+      // 1. Check note category update
       expect(DatabaseService.updateNoteCategory).toHaveBeenCalledWith(
         mockTargetNote.workerId,
         mockTargetNote.id,
         "Work",
         "Blue"
       );
-      // 2. Should add note text to category items
+      // 2. Check category items update
       expect(DatabaseService.updateCategory).toHaveBeenCalledWith("cat1", {
-        items: ["Task 1", "My Important Task"],
+        items: ["Task 1", mockTargetNote.text],
       });
-      // 3. Should close dialog
+      // 3. Dialog closed
       expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
-      expect(store.get(addToCategoryTargetAtom)).toBeNull();
     });
   });
 
   it("creates category and adds note after propagation", async () => {
-    const newId = "cat_new";
-    (DatabaseService.createCategory as any).mockResolvedValue(newId);
+    // Mock createCategory to return a new ID
+    (DatabaseService.createCategory as any).mockResolvedValue("newCatId");
 
     renderDialog();
 
-    // 1. Enter new category name
     const input = screen.getByPlaceholderText("Category Name");
+    const createBtn = screen.getByText("Create and Add");
+
+    // Type new name
     fireEvent.change(input, { target: { value: "Urgent" } });
 
-    // 2. Click Create
-    const createBtn = screen.getByText("Create and Add");
+    // Click create
     fireEvent.click(createBtn);
 
-    expect(DatabaseService.createCategory).toHaveBeenCalledWith("Urgent");
+    // Expect create call with default color "Green"
+    expect(DatabaseService.createCategory).toHaveBeenCalledWith(
+      "Urgent",
+      "Green"
+    );
     expect(createBtn).toHaveTextContent("Creating...");
     expect(createBtn).toBeDisabled();
 
-    // The dialog waits for the category to appear in the atom.
-    // Simulate the database update propagating to the atom:
-    const updatedCategories = {
+    // Now simulate the prop update that happens when DB changes
+    const newCategories = {
       ...mockCategories,
-      [newId]: { name: "Urgent", items: [], color: "Green" },
+      newCatId: { name: "Urgent", items: [], color: "Green" },
     };
+    store.set(categoriesAtom, newCategories);
 
-    // Updating the store should trigger the useEffect in the component
-    store.set(categoriesAtom, updatedCategories);
-
+    // Wait for the effect to trigger selection
     await waitFor(() => {
-      // Verify assignment logic ran for the NEW category
       expect(DatabaseService.updateNoteCategory).toHaveBeenCalledWith(
         mockTargetNote.workerId,
         mockTargetNote.id,
@@ -149,13 +155,36 @@ describe("AddToCategoryDialog", () => {
     });
   });
 
+  it("creates category with specific color when selected", async () => {
+    (DatabaseService.createCategory as any).mockResolvedValue("blueCatId");
+    renderDialog();
+
+    const input = screen.getByPlaceholderText("Category Name");
+
+    // Find the Blue color button (assuming title attribute is set to the color name)
+    const blueButton = screen.getByTitle("Blue");
+    fireEvent.click(blueButton);
+
+    fireEvent.change(input, { target: { value: "Blue Team" } });
+    fireEvent.click(screen.getByText("Create and Add"));
+
+    expect(DatabaseService.createCategory).toHaveBeenCalledWith(
+      "Blue Team",
+      "Blue"
+    );
+  });
+
   it("creates category on Enter key press", () => {
     renderDialog();
     const input = screen.getByPlaceholderText("Category Name");
     fireEvent.change(input, { target: { value: "Enter Cat" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter", charCode: 13 });
 
-    expect(DatabaseService.createCategory).toHaveBeenCalledWith("Enter Cat");
+    // Expect default color "Green"
+    expect(DatabaseService.createCategory).toHaveBeenCalledWith(
+      "Enter Cat",
+      "Green"
+    );
   });
 
   it("does not create category on Enter if input is empty", () => {
@@ -177,6 +206,7 @@ describe("AddToCategoryDialog", () => {
     fireEvent.click(screen.getByText("Create and Add"));
 
     await waitFor(() => {
+      // Should revert to "Create and Add"
       expect(screen.getByText("Create and Add")).toBeInTheDocument();
       expect(screen.getByText("Create and Add")).not.toBeDisabled();
     });

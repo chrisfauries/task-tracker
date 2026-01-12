@@ -107,4 +107,5 @@ export interface AddToCategoryTarget {
   id: string;
   workerId: string;
   text: string;
+  color?: string;
 }

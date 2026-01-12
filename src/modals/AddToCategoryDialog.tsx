@@ -21,6 +21,7 @@ function AddToCategoryDialogContent() {
   const [newCatName, setNewCatName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [pendingCatId, setPendingCatId] = useState<string | null>(null);
+  const [selectedColor, setSelectedColor] = useState(targetNote?.color || "Green");
 
   // Handle auto-selection of newly created category
   useEffect(() => {
@@ -61,7 +62,10 @@ function AddToCategoryDialogContent() {
     if (!newCatName.trim()) return;
     setIsCreating(true);
     try {
-      const newId = await DatabaseService.createCategory(newCatName);
+      const newId = await DatabaseService.createCategory(
+        newCatName,
+        selectedColor
+      );
       if (newId) {
         setPendingCatId(newId);
         // We wait for the subscription in atoms.ts to update 'categories'
@@ -117,6 +121,24 @@ function AddToCategoryDialogContent() {
             >
               {isCreating ? "Creating..." : "Create and Add"}
             </button>
+          </div>
+
+          {/* Color Picker */}
+          <div className="flex gap-2 mt-3">
+            {Object.values(COLOR_MATRIX).map((family) => (
+              <button
+                key={family.name}
+                onClick={() => setSelectedColor(family.name)}
+                className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
+                  family.shades[1].bg
+                } ${
+                  selectedColor === family.name
+                    ? "border-slate-800 scale-110"
+                    : "border-transparent"
+                }`}
+                title={family.name}
+              />
+            ))}
           </div>
         </div>
 
