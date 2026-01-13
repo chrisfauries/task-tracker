@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { useSetAtom } from "jotai";
+import { useAtom, useSetAtom } from "jotai";
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin, BackupData } from "./types";
@@ -18,6 +18,7 @@ import { SnapshotDialog } from "./modals/SnapshotDialog";
 import { CategoryManagementDialog } from "./modals/CategoryManagementDialog";
 import { ImportExportDialog } from "./modals/ImportExportDialog";
 import { AddToCategoryDialog } from "./modals/AddToCategoryDialog";
+import { CustomColorsDialog } from "./modals/CustomColorDialog";
 import {
   AddWorkerDialog,
   EditWorkerDialog,
@@ -29,6 +30,8 @@ import {
   editingWorkerAtom,
   isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
+  isCustomColorsDialogOpenAtom,
+  customPaletteAtom
 } from "./atoms";
 
 export default function App() {
@@ -56,6 +59,19 @@ export default function App() {
   const setWorkerToDelete = useSetAtom(workerToDeleteAtom);
   const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
     useState(false);
+  const [isCustomColorsDialogOpen, setIsCustomColorsDialogOpen] = useAtom(isCustomColorsDialogOpenAtom);
+  
+  // Custom Palette State
+  const [customPalette] = useAtom(customPaletteAtom);
+
+  // SYNC: Update CSS Variables when customPalette changes
+  useEffect(() => {
+    if (customPalette && customPalette.length > 0) {
+      customPalette.forEach((color, index) => {
+        document.documentElement.style.setProperty(`--color-user-${index + 1}`, color);
+      });
+    }
+  }, [customPalette]);
 
   useEffect(() => {
     if (!user) return;
@@ -90,7 +106,8 @@ export default function App() {
   };
 
   const handleEditWorkerStart = (id: string, currentName: string) => {
-    const currentColor = boardData[id]?.defaultColor || "Green";
+    // Default to 0 (Green) if missing
+    const currentColor = boardData[id]?.defaultColor !== undefined ? boardData[id]?.defaultColor : 0;
     setEditingWorker({ id, name: currentName, color: currentColor });
     setIsEditWorkerDialogOpen(true);
   };
@@ -115,12 +132,11 @@ export default function App() {
       .map((n) => n.position);
     const lastPos = validPositions.length > 0 ? Math.max(...validPositions) : 0;
 
-    // We can iterate and create notes
     for (const [index, text] of category.items.entries()) {
       await DatabaseService.createNote(workerId, {
         text,
         column: colIndex,
-        color: category.color || "Green",
+        color: category.color !== undefined ? category.color : 0,
         position: lastPos + 1000 + index * 10,
         categoryName: category.name,
       });
@@ -224,6 +240,13 @@ export default function App() {
         boardData={boardData}
         onApply={handleApplyCategory}
       />
+      
+      {isCustomColorsDialogOpen && (
+        <CustomColorsDialog 
+          onClose={() => setIsCustomColorsDialogOpen(false)}
+          onSave={(colors) => DatabaseService.saveCustomPalette(colors)}
+        />
+      )}
 
       {isImportExportDialogOpen && (
         <ImportExportDialog

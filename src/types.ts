@@ -7,7 +7,7 @@ declare global {
 export interface Note {
   text: string;
   column: number;
-  color?: string;
+  color?: number; 
   position: number;
   categoryName?: string;
 }
@@ -15,13 +15,13 @@ export interface Note {
 export interface WorkerData {
   name: string;
   notes?: Record<string, Note>;
-  defaultColor?: string;
+  defaultColor?: number; 
 }
 
 export interface Category {
   name: string;
   items: string[];
-  color?: string;
+  color?: number; 
 }
 
 export interface LockData {
@@ -81,8 +81,8 @@ export type HistoryAction =
       type: "EDIT_COLOR";
       noteId: string;
       workerId: string;
-      prevColor: string;
-      newColor: string;
+      prevColor: number; 
+      newColor: number; 
     };
 
 export type BoardData = Record<string, WorkerData>;
@@ -107,5 +107,5 @@ export interface AddToCategoryTarget {
   id: string;
   workerId: string;
   text: string;
-  color?: string;
+  color?: number; 
 }

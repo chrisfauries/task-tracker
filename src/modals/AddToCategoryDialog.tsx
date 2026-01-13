@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { COLOR_MATRIX } from "../constants";
+import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
 import { DatabaseService } from "../DatabaseService";
 import {
   categoriesAtom,
@@ -21,7 +21,7 @@ function AddToCategoryDialogContent() {
   const [newCatName, setNewCatName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [pendingCatId, setPendingCatId] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState(targetNote?.color || "Green");
+  const [selectedColor, setSelectedColor] = useState(targetNote?.color ?? 0);
 
   // Handle auto-selection of newly created category
   useEffect(() => {
@@ -42,7 +42,7 @@ function AddToCategoryDialogContent() {
         targetNote.workerId,
         targetNote.id,
         category.name,
-        category.color || "Green"
+        category.color ?? 0
       );
 
       // 2. Add note text to the category's item list
@@ -125,18 +125,18 @@ function AddToCategoryDialogContent() {
 
           {/* Color Picker */}
           <div className="flex gap-2 mt-3">
-            {Object.values(COLOR_MATRIX).map((family) => (
+            {DEFAULT_PALETTE_HEX.map((_, index) => (
               <button
-                key={family.name}
-                onClick={() => setSelectedColor(family.name)}
+                key={index}
+                onClick={() => setSelectedColor(index)}
                 className={`w-6 h-6 rounded-full border-2 transition-transform hover:scale-110 ${
-                  family.shades[1].bg
+                  getSolidColorClass(index)
                 } ${
-                  selectedColor === family.name
+                  selectedColor === index
                     ? "border-slate-800 scale-110"
                     : "border-transparent"
                 }`}
-                title={family.name}
+                title={`Color ${index + 1}`}
               />
             ))}
           </div>
@@ -158,7 +158,7 @@ function AddToCategoryDialogContent() {
                 >
                   <div
                     className={`w-4 h-4 rounded-full ${
-                      COLOR_MATRIX[cat.color || "Green"].shades[1].bg
+                      getSolidColorClass(cat.color)
                     }`}
                   />
                   <span className="font-medium text-slate-700">{cat.name}</span>

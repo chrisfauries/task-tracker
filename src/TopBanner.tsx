@@ -24,7 +24,7 @@ export function TopBanner({
   const setAppSettingsMenuPos = useSetAtom(appSettingsMenuPosAtom);
 
   return (
-    <div className="p-4 border-b bg-white z-50 grid grid-cols-3 items-center shadow-sm">
+    <div className="p-4 border-b z-50 grid grid-cols-3 items-center shadow-sm">
       {/* Left: Title + Logo */}
       <div className="flex items-center gap-3">
         <img

@@ -10,7 +10,7 @@ interface DropZoneProps {
   workerId: string;
   colIndex: number;
   notes: Record<string, Note>;
-  defaultColor?: string;
+  defaultColor?: number;
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
   onDragEnd: () => void;
@@ -157,7 +157,7 @@ export function DropZone({
       text: "New Task",
       column: colIndex,
       position: lastPos + 1000,
-      color: defaultColor || "Green",
+      color: defaultColor ?? 0,
     };
 
     onHistory({

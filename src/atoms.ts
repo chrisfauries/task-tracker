@@ -42,7 +42,6 @@ categoriesAtom.onMount = (setSelf) => {
   return () => unsubscribe();
 };
 
-
 // Context Menu State
 export const contextMenuPosAtom = atom<{ x: number; y: number } | null>(null);
 export const appSettingsMenuPosAtom = atom<{ x: number; y: number } | null>(null);
@@ -51,8 +50,33 @@ export const appSettingsMenuPosAtom = atom<{ x: number; y: number } | null>(null
 export const isAddWorkerDialogOpenAtom = atom(false);
 
 export const isEditWorkerDialogOpenAtom = atom(false);
-export const editingWorkerAtom = atom<{ id: string; name: string; color: string } | null>(null);
+export const editingWorkerAtom = atom<{ id: string; name: string; color: number } | null>(null);
 
 export const isDeleteWorkerDialogOpenAtom = atom(false);
 export const workerToDeleteAtom = atom<{ id: string; name: string } | null>(null);
 
+// Custom Colors Dialog Atom
+export const isCustomColorsDialogOpenAtom = atom(false);
+
+// Custom Palette Atom
+// Defaults match the CSS defaults
+const DEFAULT_PALETTE = [
+  "#10B981", "#3B82F6", "#EAB308", "#EF4444", "#F97316", "#A855F7", "#EC4899"
+];
+const _customPaletteStorageAtom = atom<string[]>(DEFAULT_PALETTE);
+
+export const customPaletteAtom = atom(
+  (get) => get(_customPaletteStorageAtom),
+  (_, set, newColors: string[]) => {
+    set(_customPaletteStorageAtom, newColors);
+  }
+);
+
+customPaletteAtom.onMount = (setSelf) => {
+  const unsubscribe = DatabaseService.subscribeToCustomPalette((colors) => {
+    if (colors && Array.isArray(colors) && colors.length > 0) {
+      setSelf(colors);
+    }
+  });
+  return () => unsubscribe();
+};

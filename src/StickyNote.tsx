@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { DatabaseService } from "./DatabaseService";
-import { COLOR_MATRIX } from "./constants";
+import { getNoteStyles } from "./constants";
 import type { User } from "firebase/auth";
 import type { LocksData, HistoryAction } from "./types";
 import { NoteMenu } from "./NoteMenu";
@@ -11,7 +11,7 @@ interface StickyNoteProps {
   id: string;
   text: string;
   workerId: string;
-  color?: string;
+  color?: number; 
   column: number;
   position: number;
   categoryName?: string;
@@ -223,8 +223,36 @@ export function StickyNote({
     }
   };
 
-  const colorFamily = COLOR_MATRIX[color || "Green"] || COLOR_MATRIX.Green;
-  const shade = colorFamily.shades[column] || colorFamily.shades[0];
+  // Resolve Styles dynamically
+  const styles = getNoteStyles(color, column);
+
+  // Use inline styles for dynamic background/border colors 
+  // because Tailwind JIT often fails to detect constructed class names (e.g. "bg-user-1/20")
+  // unless they explicitly exist in the source code or safelist.
+  const colorIndex = typeof color === "number" ? color : 0;
+  const colorVar = `var(--color-user-${colorIndex + 1})`;
+
+  let dynamicStyle: React.CSSProperties = {};
+
+  if (column === 0) {
+    // Assigned: 
+    dynamicStyle = {
+      backgroundColor: `color-mix(in srgb, ${colorVar}, transparent 60%)`,
+      borderColor: `color-mix(in srgb, ${colorVar}, transparent 30%)`,
+    };
+  } else if (column === 1) {
+    // In Progress: 
+    dynamicStyle = {
+      backgroundColor: `color-mix(in srgb, ${colorVar}, transparent 25%)`,
+      borderColor: colorVar,
+    };
+  } else {
+    // Completed: 
+    dynamicStyle = {
+      backgroundColor: `color-mix(in srgb, ${colorVar}, transparent 90%)`,
+      borderColor: `color-mix(in srgb, ${colorVar}, transparent 70%)`,
+    };
+  }
 
   return (
     <div
@@ -247,9 +275,10 @@ export function StickyNote({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onContextMenu={handleContextMenu}
-        className={`${shade.bg} ${
-          shade.border
-        } p-0 rotate-[-0.5deg] border-l-4 min-h-[90px] aspect-square flex flex-col transition-all group/note relative overflow-hidden
+        style={dynamicStyle}
+        className={`
+          ${styles.text}
+          p-0 rotate-[-0.5deg] border-l-4 min-h-[90px] aspect-square flex flex-col transition-all group/note relative overflow-hidden
           ${isDragging ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
           ${
             isEditing
@@ -269,10 +298,6 @@ export function StickyNote({
           </div>
         )}
 
-        {/* SCROLL CONTAINER 
-          - maskImage provides the fade-out.
-          - overflow-x-hidden prevents accidental side-scrolling.
-        */}
         <div
           style={{
             maskImage:
@@ -290,7 +315,7 @@ export function StickyNote({
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             className={`
-              outline-none ${shade.text} 
+              outline-none ${styles.text} 
               text-[clamp(0.6rem,10cqw,1.1rem)] 
               font-medium leading-snug 
               w-full min-h-full
@@ -304,7 +329,7 @@ export function StickyNote({
 
         {categoryName && (
           <div
-            className={`absolute bottom-2 right-2 text-[10px] italic opacity-60 pointer-events-none select-none max-w-[80%] truncate ${shade.text}`}
+            className={`absolute bottom-2 right-2 text-[10px] italic opacity-60 pointer-events-none select-none max-w-[80%] truncate ${styles.text}`}
           >
             {categoryName}
           </div>

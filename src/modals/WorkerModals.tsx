@@ -1,6 +1,6 @@
 import React, {  useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { COLOR_MATRIX } from "../constants";
+import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
 import { DatabaseService } from "../DatabaseService";
 import {
   isAddWorkerDialogOpenAtom,
@@ -19,7 +19,7 @@ export function AddWorkerDialog() {
  function AddWorkerDialogContent() {
   const  setIsOpen = useSetAtom(isAddWorkerDialogOpenAtom);
   const [name, setName] = useState("");
-  const [color, setColor] = useState("Green");
+  const [color, setColor] = useState(0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,15 +49,15 @@ export function AddWorkerDialog() {
               Default Note Color
             </label>
             <div className="flex justify-center gap-2">
-              {Object.values(COLOR_MATRIX).map((family) => (
+              {DEFAULT_PALETTE_HEX.map((_, index) => (
                 <button
-                  key={family.name}
+                  key={index}
                   type="button"
-                  onClick={() => setColor(family.name)}
+                  onClick={() => setColor(index)}
                   className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                    family.shades[1].bg
+                    getSolidColorClass(index)
                   } ${
-                    color === family.name
+                    color === index
                       ? "border-slate-800 scale-110"
                       : "border-transparent"
                   }`}
@@ -99,7 +99,7 @@ export function EditWorkerDialog() {
   const [editingWorker, setEditingWorker] = useAtom(editingWorkerAtom);
 
   const [name, setName] = useState(editingWorker?.name || "");
-  const [color, setColor] = useState(editingWorker?.color || "Green");
+  const [color, setColor] = useState(editingWorker?.color ?? 0);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,15 +139,15 @@ export function EditWorkerDialog() {
               Default Note Color
             </label>
             <div className="flex justify-center gap-2">
-              {Object.values(COLOR_MATRIX).map((family) => (
+              {DEFAULT_PALETTE_HEX.map((_, index) => (
                 <button
-                  key={family.name}
+                  key={index}
                   type="button"
-                  onClick={() => setColor(family.name)}
+                  onClick={() => setColor(index)}
                   className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                    family.shades[1].bg
+                    getSolidColorClass(index)
                   } ${
-                    color === family.name
+                    color === index
                       ? "border-slate-800 scale-110"
                       : "border-transparent"
                   }`}

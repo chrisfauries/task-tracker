@@ -3,6 +3,17 @@
 @theme {
   --color-sticky-yellow: #fef9c3;
   --color-sticky-border: #facc15;
+
+  /* Custom User Colors 
+     Defined here so Tailwind generates utilities (bg-user-1, text-user-1, etc.).
+     These defaults will be overridden by the App.tsx useEffect logic. */
+  --color-user-1: #10B981; 
+  --color-user-2: #3B82F6; 
+  --color-user-3: #EAB308; 
+  --color-user-4: #EF4444; 
+  --color-user-5: #F97316; 
+  --color-user-6: #A855F7; 
+  --color-user-7: #EC4899; 
 }
 
 body {
