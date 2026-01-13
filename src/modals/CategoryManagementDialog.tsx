@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { DatabaseService } from "../DatabaseService";
-import { COLOR_MATRIX } from "../constants";
+import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
 import { isCategoryManagementDialogOpenAtom, categoriesAtom } from "../atoms";
 import type { CategoriesData, BoardData } from "../types";
 
@@ -53,7 +53,7 @@ function CategoryManagementDialogContent({
     await DatabaseService.updateCategory(id, { items: newItems });
   };
 
-  const updateColor = async (id: string, color: string) => {
+  const updateColor = async (id: string, color: number) => {
     await DatabaseService.updateCategory(id, { color });
   };
 
@@ -185,7 +185,7 @@ function CategorySidebar({ categories, selectedId, onSelect, onCreate, onDelete,
 interface CategoryListItemProps {
   id: string;
   name: string;
-  color?: string;
+  color?: number;
   isSelected: boolean;
   onSelect: () => void;
   onDelete: () => void;
@@ -282,7 +282,7 @@ function CategoryListItem({ id, name, color, isSelected, onSelect, onDelete, onR
       }`}
     >
       <div className="flex items-center gap-3">
-        <div className={`w-3 h-3 rounded-full ${COLOR_MATRIX[color || "Green"].shades[1].bg}`} />
+        <div className={`w-3 h-3 rounded-full ${getSolidColorClass(color)}`} />
         <span className="font-bold text-slate-700">{name}</span>
       </div>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -304,11 +304,11 @@ function CategoryListItem({ id, name, color, isSelected, onSelect, onDelete, onR
 }
 
 interface CategoryEditorProps {
-  category: { name: string; items?: string[]; color?: string };
+  category: { name: string; items?: string[]; color?: number };
   categoryId: string;
   boardData: BoardData;
   onUpdateItems: (items: string[]) => void;
-  onUpdateColor: (color: string) => void;
+  onUpdateColor: (color: number) => void;
   onApply: (workerId: string, colIndex: number) => void;
 }
 
@@ -322,18 +322,18 @@ function CategoryEditor({ category, categoryId, boardData, onUpdateItems, onUpda
   );
 }
 
-function ColorPicker({ currentColor, onPick }: { currentColor?: string; onPick: (c: string) => void }) {
+function ColorPicker({ currentColor, onPick }: { currentColor?: number; onPick: (c: number) => void }) {
   return (
     <section>
       <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Category Color</h3>
       <div className="flex gap-2">
-        {Object.values(COLOR_MATRIX).map((family) => (
+        {DEFAULT_PALETTE_HEX.map((_, index) => (
           <button
-            key={family.name}
-            onClick={() => onPick(family.name)}
+            key={index}
+            onClick={() => onPick(index)}
             className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
-              family.shades[1].bg
-            } ${currentColor === family.name ? "border-slate-800 scale-110" : "border-transparent"}`}
+              getSolidColorClass(index)
+            } ${currentColor === index ? "border-slate-800 scale-110" : "border-transparent"}`}
           />
         ))}
       </div>

@@ -24,7 +24,7 @@ export function TopBanner({
   const setAppSettingsMenuPos = useSetAtom(appSettingsMenuPosAtom);
 
   return (
-    <div className="p-4 border-b bg-user-1 z-50 grid grid-cols-3 items-center shadow-sm">
+    <div className="p-4 border-b z-50 grid grid-cols-3 items-center shadow-sm">
       {/* Left: Title + Logo */}
       <div className="flex items-center gap-3">
         <img
@@ -49,17 +49,6 @@ export function TopBanner({
           presence={presence}
           className="mr-4 border-r pr-4 border-slate-200"
         />
-
-        <button
-          onClick={() => {
-            document.documentElement.style.setProperty(
-              "--color-user-1",
-              "#ffffff"
-            );
-          }}
-        >
-          Update Color
-        </button>
 
         <button
           onClick={(e) => {

@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { DatabaseService } from "./DatabaseService";
-import { COLOR_MATRIX } from "./constants";
+import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "./constants";
 import type { HistoryAction } from "./types";
 
 interface NoteMenuProps {
   id: string;
   workerId: string;
-  color?: string;
+  color?: number;
   isLockedByOther: boolean;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
@@ -27,7 +27,7 @@ export function NoteMenu({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const currentColor = color || "Green";
+  const currentColor = color !== undefined ? color : 0;
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -61,10 +61,7 @@ export function NoteMenu({
         ✕
       </button>
 
-      {/* BOTTOM DRAWER TRIGGER (CHEVRON) 
-          FIX: Added duration-0 and conditional visibility to ensure it 
-          disappears instantly on click to avoid clipping the menu.
-      */}
+      {/* BOTTOM DRAWER TRIGGER (CHEVRON) */}
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -92,11 +89,11 @@ export function NoteMenu({
         ${isPickerOpen ? "translate-y-0" : "translate-y-full pointer-events-none"}
       `}>
         <div className="flex flex-wrap items-center justify-center gap-1.5">
-          {Object.values(COLOR_MATRIX).map((family) => {
-            const isSelected = family.name === currentColor;
+          {DEFAULT_PALETTE_HEX.map((_, index) => {
+            const isSelected = index === currentColor;
             return (
               <button
-                key={family.name}
+                key={index}
                 onClick={async (e) => {
                   e.stopPropagation();
                   onActivity();
@@ -105,20 +102,20 @@ export function NoteMenu({
                     noteId: id,
                     workerId,
                     prevColor: currentColor,
-                    newColor: family.name,
+                    newColor: index,
                   });
                   await acquireLock();
-                  await DatabaseService.updateNoteColor(workerId, id, family.name);
+                  await DatabaseService.updateNoteColor(workerId, id, index);
                   releaseLock();
                   setIsPickerOpen(false);
                 }}
                 className={`
-                  relative w-3.5 h-3.5 rounded-full ${family.shades[1].bg} 
+                  relative w-3.5 h-3.5 rounded-full ${getSolidColorClass(index)} 
                   border border-black/10 hover:scale-125 
                   transition-all shadow-sm flex-shrink-0
                   ${isSelected ? "ring-2 ring-offset-1 ring-slate-400 scale-110" : ""}
                 `}
-                title={family.name}
+                title={`Color ${index + 1}`}
               />
             );
           })}

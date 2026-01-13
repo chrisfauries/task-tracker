@@ -1,26 +1,27 @@
 import React, { useState } from "react";
+import { useAtomValue } from "jotai";
+import { customPaletteAtom } from "../atoms";
 
 interface CustomColorsDialogProps {
   onClose: () => void;
   onSave?: (colors: string[]) => void;
 }
 
-// Initial defaults approximating the current Tailwind palette
-const DEFAULT_PALETTE = [
-  "#10B981", // Green (Emerald-500)
-  "#3B82F6", // Blue (Blue-500)
-  "#EAB308", // Yellow (Yellow-500)
-  "#EF4444", // Red (Red-500)
-  "#F97316", // Orange (Orange-500)
-  "#A855F7", // Purple (Purple-500)
-  "#EC4899", // Pink (Pink-500)
-];
-
-const SLOT_NAMES = ["Green", "Blue", "Yellow", "Red", "Orange", "Purple", "Pink"];
+// Updated to generic names as requested
+const SLOT_NAMES = ["One", "Two", "Three", "Four", "Five", "Six", "Seven"];
 
 export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps) {
-  const [colors, setColors] = useState<string[]>(DEFAULT_PALETTE);
+  // Read the current live palette from the global state (which is synced with DB)
+  const currentPalette = useAtomValue(customPaletteAtom);
+  
+  // Initialize local state for editing
+  const [colors, setColors] = useState<string[]>(currentPalette);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
+
+  // Default fallback if reset is needed
+  const DEFAULT_PALETTE = [
+    "#10B981", "#3B82F6", "#EAB308", "#EF4444", "#F97316", "#A855F7", "#EC4899"
+  ];
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColors = [...colors];
@@ -38,22 +39,21 @@ export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps)
   };
 
   // Helper to generate visual previews of the shades
-  // In a real implementation, this logic would generate the actual styles used by the app
   const getPreviewStyles = (baseColor: string) => {
     return {
-      shade0: {
-        backgroundColor: `${baseColor}20`, // ~12% opacity (Light bg)
-        borderColor: `${baseColor}60`,    // ~37% opacity (Border)
-        color: baseColor,                 // Text
+      assigned: {
+        backgroundColor: `${baseColor}80`,
+        borderColor: `${baseColor}60`,    
+        color: "#525252ff",                 
       },
-      shade1: {
-        backgroundColor: `${baseColor}60`, // ~37% opacity (Medium bg)
-        borderColor: baseColor,           // Solid border
-        color: "#000000",                 // Dark text (simplified)
+      inProgress: {
+        backgroundColor: `${baseColor}D0`, 
+        borderColor: baseColor,           
+        color: "#0f172a",                 
       },
-      shade2: {
-        backgroundColor: `${baseColor}10`, // Very faint
-        border: `1px dashed ${baseColor}40`,
+      completed: {
+        backgroundColor: `${baseColor}30`, 
+        borderColor: `${baseColor}30`,
         color: "#94a3b8",
       }
     };
@@ -156,45 +156,53 @@ export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps)
             </section>
 
             {/* Preview Section */}
-            <section className="flex-1 bg-slate-50 rounded-2xl p-6 border border-slate-100">
+            <section className="flex-1 bg-slate-50 rounded-2xl p-6 border border-slate-100 flex flex-col">
               <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Preview</h3>
               
-              <div className="space-y-4">
-                {/* Card Preview (Shade 0 - Default Task) */}
+              <div className="flex-1 flex items-center justify-between gap-4">
+                {/* Assigned (Standard) */}
                 <div 
-                  className="p-4 rounded-xl border-l-4 shadow-sm"
+                  className="flex-1 aspect-[3/4] rounded-xl border-l-4 shadow-sm p-4 flex flex-col relative rotate-[-1deg] transition-transform hover:scale-105"
                   style={{ 
-                    backgroundColor: currentStyles.shade0.backgroundColor,
-                    borderLeftColor: currentStyles.shade0.borderColor,
-                    color: currentStyles.shade0.color
+                    backgroundColor: currentStyles.assigned.backgroundColor,
+                    borderLeftColor: currentStyles.assigned.borderColor,
+                    color: currentStyles.assigned.color
                   }}
                 >
-                  <div className="font-bold text-sm mb-1">Task Card (Active)</div>
-                  <div className="text-xs opacity-80">This is how a standard active task will look on the board.</div>
+                  <div className="font-bold text-sm mb-2">Assigned</div>
+                  <div className="text-xs opacity-80 leading-relaxed">
+                    Task is ready to be picked up.
+                  </div>
                 </div>
 
-                {/* Header Preview (Shade 1 - Stronger/Header) */}
+                {/* In Progress (Active/Darker) */}
                 <div 
-                  className="p-3 rounded-lg text-center font-bold text-sm shadow-sm"
+                  className="flex-1 aspect-[3/4] rounded-xl border-l-4 shadow-md p-4 flex flex-col relative rotate-[1deg] scale-105 z-10"
                   style={{
-                    backgroundColor: currentStyles.shade1.backgroundColor,
-                    borderColor: currentStyles.shade1.borderColor,
-                    color: "#1e293b" // Dark slate for contrast in this preview
+                    backgroundColor: currentStyles.inProgress.backgroundColor,
+                    borderLeftColor: currentStyles.inProgress.borderColor,
+                    color: currentStyles.inProgress.color
                   }}
                 >
-                   Category Header / Strong Label
+                   <div className="font-bold text-sm mb-2">In Progress</div>
+                   <div className="text-xs opacity-90 leading-relaxed">
+                    Currently being worked on.
+                  </div>
                 </div>
 
-                 {/* Placeholder Preview (Shade 2 - Faint) */}
+                 {/* Completed (Faint) */}
                  <div 
-                  className="p-4 rounded-xl text-center text-xs font-medium border-2 border-dashed"
+                  className="flex-1 aspect-[3/4] rounded-xl border-l-4 p-4 flex flex-col relative rotate-[-1deg] opacity-90 transition-transform hover:scale-105"
                   style={{
-                    backgroundColor: currentStyles.shade2.backgroundColor,
-                    borderColor: currentStyles.shade2.border.split(' ')[2], // Extract color from border string
-                    color: currentStyles.shade2.color
+                    backgroundColor: currentStyles.completed.backgroundColor,
+                    borderLeftColor: currentStyles.completed.borderColor,
+                    color: currentStyles.completed.color
                   }}
                 >
-                   + Drop zone or empty state placeholder
+                   <div className="font-bold text-sm mb-2">Completed</div>
+                   <div className="text-xs opacity-80 leading-relaxed">
+                    Task finished.
+                  </div>
                 </div>
               </div>
             </section>

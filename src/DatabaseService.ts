@@ -55,6 +55,18 @@ export class DatabaseService {
   }
 
   // ==========================================
+  // Custom Palette Operations
+  // ==========================================
+
+  static async saveCustomPalette(colors: string[]): Promise<void> {
+    await set(ref(db, "customPalette"), colors);
+  }
+
+  static subscribeToCustomPalette(callback: (colors: string[]) => void): Unsubscribe {
+    return onValue(ref(db, "customPalette"), (snap) => callback(snap.val() || []));
+  }
+
+  // ==========================================
   // Note Operations
   // ==========================================
 
@@ -81,11 +93,11 @@ export class DatabaseService {
     await set(ref(db, `boarddata/${workerId}/notes/${noteId}/text`), text);
   }
 
-  static async updateNoteColor(workerId: string, noteId: string, color: string): Promise<void> {
+  static async updateNoteColor(workerId: string, noteId: string, color: number): Promise<void> {
     await set(ref(db, `boarddata/${workerId}/notes/${noteId}/color`), color);
   }
 
-  static async updateNoteCategory(workerId: string, noteId: string, categoryName: string, color: string): Promise<void> {
+  static async updateNoteCategory(workerId: string, noteId: string, categoryName: string, color: number): Promise<void> {
     await update(ref(db, `boarddata/${workerId}/notes/${noteId}`), { categoryName, color });
   }
 
@@ -129,7 +141,7 @@ export class DatabaseService {
   // Worker Operations
   // ==========================================
 
-  static async createWorker(name: string, defaultColor: string): Promise<void> {
+  static async createWorker(name: string, defaultColor: number): Promise<void> {
     await push(ref(db, "boarddata"), { name, notes: {}, defaultColor });
   }
 
@@ -145,7 +157,7 @@ export class DatabaseService {
   // Category Operations
   // ==========================================
 
-  static async createCategory(name: string, color: string = "Green"): Promise<string | null> {
+  static async createCategory(name: string, color: number = 0): Promise<string | null> {
     const newRef = push(ref(db, "categories"));
     await set(newRef, { name, items: [], color });
     return newRef.key;

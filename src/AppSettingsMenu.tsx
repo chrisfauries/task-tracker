@@ -1,5 +1,5 @@
 import { useAtom, useSetAtom } from "jotai";
-import { appSettingsMenuPosAtom, isSnapshotDialogOpenAtom, isCategoryManagementDialogOpenAtom } from "./atoms";
+import { appSettingsMenuPosAtom, isSnapshotDialogOpenAtom, isCategoryManagementDialogOpenAtom, isCustomColorsDialogOpenAtom } from "./atoms";
 
 interface AppSettingsMenuProps {
   onLogout: () => void;
@@ -15,6 +15,7 @@ export const AppSettingsMenu = ({
   const [position, setPosition] = useAtom(appSettingsMenuPosAtom);
   const setIsSnapshotOpen = useSetAtom(isSnapshotDialogOpenAtom);
   const setIsCategoryDialogOpen = useSetAtom(isCategoryManagementDialogOpenAtom);
+  const setIsCustomColorsDialogOpen = useSetAtom(isCustomColorsDialogOpenAtom);
 
   if (!position) return null;
 
@@ -41,6 +42,12 @@ export const AppSettingsMenu = ({
           className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700"
         >
           Categories
+        </button>
+        <button
+          onClick={() => handleAction(() => setIsCustomColorsDialogOpen(true))}
+          className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700"
+        >
+          Customize Colors
         </button>
         <button
           onClick={() => handleAction(() => setIsSnapshotOpen(true))}
