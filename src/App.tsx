@@ -228,6 +228,8 @@ export default function App() {
 
       <CustomColorsDialog onClose={() =>{}}/>
 
+      <CustomColorsDialog onClose={() =>{}}/>
+
       {isCategoryDialogOpen && (
         <CategoryDialog
           categories={categories}
