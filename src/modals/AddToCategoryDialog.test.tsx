@@ -16,7 +16,7 @@ vi.mock("../DatabaseService", () => ({
     createCategory: vi.fn(),
     updateNoteCategory: vi.fn(),
     updateCategory: vi.fn(),
-    getNote: vi.fn().mockResolvedValue({ color: "Green" }), // Mock getNote for color fetching
+    getNote: vi.fn().mockResolvedValue({ color: 0 }), // Mock getNote for color fetching (0=Green)
     // We mock the subscription to avoid actual implementation interference,
     // though we will manually inject data into the atom store.
     subscribeToCategories: vi.fn(() => () => {}),
@@ -25,15 +25,15 @@ vi.mock("../DatabaseService", () => ({
 
 describe("AddToCategoryDialog", () => {
   const mockCategories: CategoriesData = {
-    cat1: { name: "Work", items: ["Task 1"], color: "Blue" },
-    cat2: { name: "Personal", items: [], color: "Green" },
+    cat1: { name: "Work", items: ["Task 1"], color: 1 }, // 1 = Blue
+    cat2: { name: "Personal", items: [], color: 0 }, // 0 = Green
   };
 
   const mockTargetNote = {
     id: "note123",
     workerId: "workerABC",
     text: "My Important Task",
-    color: "Green",
+    color: 0, // Green
   };
 
   let store: ReturnType<typeof createStore>;
@@ -96,7 +96,7 @@ describe("AddToCategoryDialog", () => {
         mockTargetNote.workerId,
         mockTargetNote.id,
         "Work",
-        "Blue"
+        1 // Expect Blue color index
       );
       // 2. Check category items update
       expect(DatabaseService.updateCategory).toHaveBeenCalledWith("cat1", {
@@ -122,11 +122,11 @@ describe("AddToCategoryDialog", () => {
     // Click create
     fireEvent.click(createBtn);
 
-    // Expect create call with default color "Green"
+    // Expect create call with default color 0 (Green)
     await waitFor(() => {
         expect(DatabaseService.createCategory).toHaveBeenCalledWith(
             "Urgent",
-            "Green"
+            0
         );
     });
     
@@ -136,7 +136,7 @@ describe("AddToCategoryDialog", () => {
     // Now simulate the prop update that happens when DB changes
     const newCategories = {
       ...mockCategories,
-      newCatId: { name: "Urgent", items: [], color: "Green" },
+      newCatId: { name: "Urgent", items: [], color: 0 },
     };
     store.set(categoriesAtom, newCategories);
 
@@ -146,7 +146,7 @@ describe("AddToCategoryDialog", () => {
         mockTargetNote.workerId,
         mockTargetNote.id,
         "Urgent",
-        "Green"
+        0
       );
       expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
     });
@@ -158,8 +158,8 @@ describe("AddToCategoryDialog", () => {
 
     const input = screen.getByPlaceholderText("Category Name");
 
-    // Find the Blue color button (assuming title attribute is set to the color name)
-    const blueButton = screen.getByTitle("Blue");
+    // Find the Blue color button by its new title format "Color 2" (Index 1)
+    const blueButton = screen.getByTitle("Color 2");
     fireEvent.click(blueButton);
 
     fireEvent.change(input, { target: { value: "Blue Team" } });
@@ -168,7 +168,7 @@ describe("AddToCategoryDialog", () => {
     await waitFor(() => {
         expect(DatabaseService.createCategory).toHaveBeenCalledWith(
         "Blue Team",
-        "Blue"
+        1 // Expect Blue index
         );
     });
   });
@@ -179,11 +179,11 @@ describe("AddToCategoryDialog", () => {
     fireEvent.change(input, { target: { value: "Enter Cat" } });
     fireEvent.keyDown(input, { key: "Enter", code: "Enter", charCode: 13 });
 
-    // Expect default color "Green"
+    // Expect default color 0 (Green)
     await waitFor(() => {
         expect(DatabaseService.createCategory).toHaveBeenCalledWith(
         "Enter Cat",
-        "Green"
+        0
         );
     });
   });

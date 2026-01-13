@@ -69,7 +69,7 @@ describe("WorkerModals", () => {
       await waitFor(() => {
         expect(DatabaseService.createWorker).toHaveBeenCalledWith(
           "John Doe",
-          "Green"
+          0 // Expect default color index 0 (Green)
         );
         expect(store.get(isAddWorkerDialogOpenAtom)).toBe(false);
       });
@@ -96,13 +96,10 @@ describe("WorkerModals", () => {
       fireEvent.click(screen.getByText("Add to Board"));
 
       await waitFor(() => {
-        // We just verify it was called with something other than "Green" if we clicked a different button
-        // Or if we know the order of colors in constants, we could be specific.
-        // For now, checking call and closure is robust enough.
         expect(DatabaseService.createWorker).toHaveBeenCalled();
         const args = (DatabaseService.createWorker as any).mock.calls[0];
         expect(args[0]).toBe("Blue Worker");
-        expect(args[1]).not.toBe("Green");
+        expect(args[1]).toBe(1); // Expect index 1 (Blue)
         expect(store.get(isAddWorkerDialogOpenAtom)).toBe(false);
       });
     });
@@ -121,7 +118,7 @@ describe("WorkerModals", () => {
   });
 
   describe("EditWorkerDialog", () => {
-    const mockWorker = { id: "w1", name: "Old Name", color: "Blue" };
+    const mockWorker = { id: "w1", name: "Old Name", color: 1 }; // 1 = Blue
 
     const renderDialog = () => {
       return render(
@@ -160,7 +157,7 @@ describe("WorkerModals", () => {
       await waitFor(() => {
         expect(DatabaseService.updateWorker).toHaveBeenCalledWith("w1", {
           name: "New Name",
-          defaultColor: "Blue",
+          defaultColor: 1, // Expect preserved color 1
         });
         expect(store.get(isEditWorkerDialogOpenAtom)).toBe(false);
         expect(store.get(editingWorkerAtom)).toBe(null);

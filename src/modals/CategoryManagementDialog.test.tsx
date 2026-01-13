@@ -21,22 +21,20 @@ describe("CategoryManagementDialog", () => {
   const onApplyMock = vi.fn();
 
   const mockCategories: CategoriesData = {
-    "cat-1": { name: "Math", color: "Green", items: ["Algebra", "Geometry"] },
-    "cat-2": { name: "Science", color: "Blue", items: ["Physics"] },
+    "cat-1": { name: "Math", color: 0, items: ["Algebra", "Geometry"] }, // 0 = Green
+    "cat-2": { name: "Science", color: 1, items: ["Physics"] }, // 1 = Blue
   };
 
   const mockBoardData: BoardData = {
     "worker-1": {
       name: "John Doe",
-      defaultColor: "Blue",
+      defaultColor: 1, // Blue
       notes: {},
-      columns: {},
     },
     "worker-2": {
       name: "Jane Smith",
-      defaultColor: "Red",
+      defaultColor: 3, // Red
       notes: {},
-      columns: {},
     },
   };
 
@@ -248,8 +246,8 @@ describe("CategoryManagementDialog", () => {
       const editor = screen.getByText("Category Color").parentElement;
       const buttons = within(editor!).getAllByRole("button");
       
-      // Find the Red button by its class name
-      const redBtn = buttons.find(b => b.className.includes("bg-red-300"));
+      // Red is index 3, which maps to class "bg-user-4"
+      const redBtn = buttons.find(b => b.className.includes("bg-user-4"));
       
       if (!redBtn) throw new Error("Red color button not found");
       
@@ -257,7 +255,7 @@ describe("CategoryManagementDialog", () => {
 
       await waitFor(() => {
         expect(DatabaseService.updateCategory).toHaveBeenCalledWith("cat-1", {
-          color: "Red",
+          color: 3, // Expect 3 for Red
         });
       });
     });

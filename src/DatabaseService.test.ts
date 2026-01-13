@@ -154,15 +154,15 @@ describe("DatabaseService", () => {
     });
 
     it("updateNoteColor sets new color", async () => {
-      await DatabaseService.updateNoteColor("w1", "n1", "blue");
-      expect(set).toHaveBeenCalledWith(expect.anything(), "blue");
+      await DatabaseService.updateNoteColor("w1", "n1", 1); // 1 = Blue
+      expect(set).toHaveBeenCalledWith(expect.anything(), 1);
     });
 
     it("updateNoteCategory updates category and color", async () => {
-      await DatabaseService.updateNoteCategory("w1", "n1", "Work", "Red");
+      await DatabaseService.updateNoteCategory("w1", "n1", "Work", 3); // 3 = Red
       expect(update).toHaveBeenCalledWith(expect.anything(), {
         categoryName: "Work",
-        color: "Red",
+        color: 3,
       });
     });
 
@@ -190,10 +190,10 @@ describe("DatabaseService", () => {
 
   describe("Worker Operations", () => {
     it("createWorker pushes new worker", async () => {
-      await DatabaseService.createWorker("Dave", "Red");
+      await DatabaseService.createWorker("Dave", 3); // 3 = Red
       expect(push).toHaveBeenCalledWith(
         expect.anything(),
-        expect.objectContaining({ name: "Dave", defaultColor: "Red" })
+        expect.objectContaining({ name: "Dave", defaultColor: 3 })
       );
     });
 
@@ -221,18 +221,20 @@ describe("DatabaseService", () => {
       expect(push).toHaveBeenCalled();
 
       // 2. set called with the ref from push, and the data
+      // Default color is 0 (Green)
       expect(set).toHaveBeenCalledWith(
         expect.objectContaining({ key: result }),
-        { name, items: [], color: "Green" }
+        { name, items: [], color: 0 } 
       );
 
       // 3. result matches the key format
       expect(result).toMatch(/^mock-key-/);
     });
+    
     it("createCategory creates category with color and returns key ", async () => {
       const name = "New Category";
       // Execute
-      const result = await DatabaseService.createCategory(name, "Red");
+      const result = await DatabaseService.createCategory(name, 3); // 3 = Red
 
       // Verification
       // 1. push called to generate key (arg 1 is the ref)
@@ -241,7 +243,7 @@ describe("DatabaseService", () => {
       // 2. set called with the ref from push, and the data
       expect(set).toHaveBeenCalledWith(
         expect.objectContaining({ key: result }),
-        { name, items: [], color: "Red" }
+        { name, items: [], color: 3 }
       );
 
       // 3. result matches the key format
@@ -249,8 +251,8 @@ describe("DatabaseService", () => {
     });
 
     it("updateCategory updates fields", async () => {
-      await DatabaseService.updateCategory("cat1", { color: "Red" });
-      expect(update).toHaveBeenCalledWith(expect.anything(), { color: "Red" });
+      await DatabaseService.updateCategory("cat1", { color: 3 });
+      expect(update).toHaveBeenCalledWith(expect.anything(), { color: 3 });
     });
 
     it("deleteCategory removes category", async () => {
