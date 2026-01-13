@@ -228,7 +228,7 @@ export function StickyNote({
 
   return (
     <div
-      className="relative"
+      className="relative @container"
       onDragOver={handleDragOver}
       onDragLeave={() => setDropIndicator(null)}
       onDrop={handleNoteDrop}
@@ -249,7 +249,7 @@ export function StickyNote({
         onContextMenu={handleContextMenu}
         className={`${shade.bg} ${
           shade.border
-        } p-4 rotate-[-0.5deg] border-l-4 min-h-[160px] aspect-square flex flex-col transition-all group/note relative
+        } p-0 rotate-[-0.5deg] border-l-4 min-h-[90px] aspect-square flex flex-col transition-all group/note relative overflow-hidden
           ${isDragging ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
           ${
             isEditing
@@ -269,15 +269,37 @@ export function StickyNote({
           </div>
         )}
 
+        {/* SCROLL CONTAINER 
+          - maskImage provides the fade-out.
+          - overflow-x-hidden prevents accidental side-scrolling.
+        */}
         <div
-          ref={textRef}
-          contentEditable={isEditing}
-          suppressContentEditableWarning
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          className={`outline-none ${shade.text} text-sm font-medium leading-snug flex-grow whitespace-pre-wrap overflow-y-auto pb-6 flex flex-col justify-center text-center note-scroll`}
+          style={{
+            maskImage:
+              "linear-gradient(to bottom, black 80%, transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom, black 80%, transparent 100%)",
+          }}
+          className="flex-grow overflow-y-auto overflow-x-hidden note-scroll"
         >
-          {text}
+
+          <div
+            ref={textRef}
+            contentEditable={isEditing}
+            suppressContentEditableWarning
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            className={`
+              outline-none ${shade.text} 
+              text-[clamp(0.6rem,10cqw,1.1rem)] 
+              font-medium leading-snug 
+              w-full min-h-full
+              flex flex-col justify-center items-center text-center
+              px-3 py-3 whitespace-pre-wrap break-words
+            `}
+          >
+            {text}
+          </div>
         </div>
 
         {categoryName && (

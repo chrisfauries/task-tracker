@@ -34,10 +34,10 @@ export function Board({
   onDeleteWorker,
 }: BoardProps) {
   return (
-    <div className="flex-1 overflow-auto py-8">
+    <div className="flex-1 overflow-auto py-3">
       <div className="min-w-[100%] flex flex-col">
         {/* Column Headers */}
-        <div className="flex mb-4 items-center">
+        <div className="flex mb-2 items-center">
           <div className="sticky left-0 bg-slate-50 z-40 w-24 pl-8 flex-none"></div>
           {Object.values(COLUMN_NAMES).map((columnName) => (
             <div

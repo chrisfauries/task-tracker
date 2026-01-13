@@ -33,7 +33,7 @@ export function WorkerRow({
   onDeleteWorker,
 }: WorkerRowProps) {
   return (
-    <div className="flex mb-6 min-h-[250px]">
+    <div className="flex mb-2 min-h-[100px]">
       {/* Name Tag Component */}
       <WorkerNameTag
         workerId={workerId}
