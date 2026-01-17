@@ -1,21 +1,26 @@
 import { useAtom, useSetAtom } from "jotai";
-import { appSettingsMenuPosAtom, isSnapshotDialogOpenAtom, isCategoryManagementDialogOpenAtom, isCustomColorsDialogOpenAtom } from "./atoms";
+import { 
+  appSettingsMenuPosAtom, 
+  isSnapshotDialogOpenAtom, 
+  isCategoryManagementDialogOpenAtom, 
+  isCustomColorsDialogOpenAtom,
+  isImportExportDialogOpenAtom 
+} from "./atoms";
 
 interface AppSettingsMenuProps {
   onLogout: () => void;
-  onOpenImportExport: () => void;
   onOpenAddWorker: () => void;
 }
 
 export const AppSettingsMenu = ({
   onLogout,
-  onOpenImportExport,
   onOpenAddWorker,
 }: AppSettingsMenuProps) => {
   const [position, setPosition] = useAtom(appSettingsMenuPosAtom);
   const setIsSnapshotOpen = useSetAtom(isSnapshotDialogOpenAtom);
   const setIsCategoryDialogOpen = useSetAtom(isCategoryManagementDialogOpenAtom);
   const setIsCustomColorsDialogOpen = useSetAtom(isCustomColorsDialogOpenAtom);
+  const setIsImportExportDialogOpen = useSetAtom(isImportExportDialogOpenAtom);
 
   if (!position) return null;
 
@@ -56,7 +61,7 @@ export const AppSettingsMenu = ({
           Snapshots
         </button>
         <button
-          onClick={() => handleAction(onOpenImportExport)}
+          onClick={() => handleAction(() => setIsImportExportDialogOpen(true))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700"
         >
           Import/Export

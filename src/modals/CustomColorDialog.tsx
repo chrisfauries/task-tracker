@@ -1,16 +1,21 @@
 import React, { useState } from "react";
-import { useAtomValue } from "jotai";
-import { customPaletteAtom } from "../atoms";
+import { useAtomValue, useSetAtom } from "jotai";
+import { customPaletteAtom, isCustomColorsDialogOpenAtom } from "../atoms";
+import { DatabaseService } from "../DatabaseService";
 
-interface CustomColorsDialogProps {
-  onClose: () => void;
-  onSave?: (colors: string[]) => void;
+export function CustomColorsDialog() {
+  const isOpen = useAtomValue(isCustomColorsDialogOpenAtom);
+
+  if (!isOpen) return null;
+
+  return <CustomColorsDialogContent />;
 }
 
 // Updated to generic names as requested
 const SLOT_NAMES = ["One", "Two", "Three", "Four", "Five", "Six", "Seven"];
 
-export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps) {
+function CustomColorsDialogContent() {
+  const setIsOpen = useSetAtom(isCustomColorsDialogOpenAtom);
   // Read the current live palette from the global state (which is synced with DB)
   const currentPalette = useAtomValue(customPaletteAtom);
   
@@ -23,6 +28,8 @@ export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps)
     "#10B981", "#3B82F6", "#EAB308", "#EF4444", "#F97316", "#A855F7", "#EC4899"
   ];
 
+  const handleClose = () => setIsOpen(false);
+
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColors = [...colors];
     newColors[selectedIndex] = e.target.value;
@@ -34,8 +41,8 @@ export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps)
   };
 
   const handleSave = () => {
-    if (onSave) onSave(colors);
-    onClose();
+    DatabaseService.saveCustomPalette(colors);
+    handleClose();
   };
 
   // Helper to generate visual previews of the shades
@@ -72,7 +79,7 @@ export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps)
             <p className="text-slate-500 text-sm">Choose 7 colors to use across your board.</p>
           </div>
           <button 
-            onClick={onClose} 
+            onClick={handleClose} 
             className="text-slate-400 hover:text-slate-600 text-2xl w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-200 transition"
           >
             ✕
@@ -219,7 +226,7 @@ export function CustomColorsDialog({ onClose, onSave }: CustomColorsDialogProps)
           </button>
           <div className="flex gap-3">
             <button 
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-2 rounded-lg font-bold text-slate-600 hover:bg-slate-200 transition"
             >
               Cancel

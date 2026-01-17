@@ -33,7 +33,7 @@ export function WorkerRow({
   onDeleteWorker,
 }: WorkerRowProps) {
   return (
-    <div className="flex mb-2 min-h-[100px]">
+    <div className="flex mb-1.5 min-h-[100px]">
       {/* Name Tag Component */}
       <WorkerNameTag
         workerId={workerId}
@@ -44,7 +44,7 @@ export function WorkerRow({
 
       {/* Columns */}
       {Object.keys(COLUMN_NAMES).map((_, colIndex) => (
-        <div key={colIndex} className="w-[40%] flex-none px-2">
+        <div key={colIndex} className="w-[40%] flex-none pl-1 pr-2">
           <DropZone
             workerId={workerId}
             colIndex={colIndex}

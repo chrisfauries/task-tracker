@@ -58,6 +58,9 @@ export const workerToDeleteAtom = atom<{ id: string; name: string } | null>(null
 // Custom Colors Dialog Atom
 export const isCustomColorsDialogOpenAtom = atom(false);
 
+// Import/Export Dialog Atom
+export const isImportExportDialogOpenAtom = atom(false);
+
 // Custom Palette Atom
 // Defaults match the CSS defaults
 const DEFAULT_PALETTE = [

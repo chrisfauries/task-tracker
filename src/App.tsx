@@ -4,7 +4,7 @@ import type { User } from "firebase/auth";
 import { useAtom, useSetAtom } from "jotai";
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
-import type { DragOrigin, BackupData } from "./types";
+import type { DragOrigin } from "./types";
 import { usePresence } from "./hooks/usePresence";
 import { useBoardData } from "./hooks/useBoardData";
 import { useSnapshots } from "./hooks/useSnapshots";
@@ -30,7 +30,6 @@ import {
   editingWorkerAtom,
   isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
-  isCustomColorsDialogOpenAtom,
   customPaletteAtom
 } from "./atoms";
 
@@ -57,9 +56,6 @@ export default function App() {
   const setEditingWorker = useSetAtom(editingWorkerAtom);
   const setIsDeleteWorkerDialogOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
   const setWorkerToDelete = useSetAtom(workerToDeleteAtom);
-  const [isImportExportDialogOpen, setIsImportExportDialogOpen] =
-    useState(false);
-  const [isCustomColorsDialogOpen, setIsCustomColorsDialogOpen] = useAtom(isCustomColorsDialogOpenAtom);
   
   // Custom Palette State
   const [customPalette] = useAtom(customPaletteAtom);
@@ -143,51 +139,6 @@ export default function App() {
     }
   };
 
-  const handleExport = () => {
-    const backup: BackupData = {
-      version: 1,
-      timestamp: Date.now(),
-      boardData,
-      categories,
-    };
-    const dataStr =
-      "data:text/json;charset=utf-8," +
-      encodeURIComponent(JSON.stringify(backup, null, 2));
-    const downloadAnchorNode = document.createElement("a");
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute(
-      "download",
-      `board_backup_${new Date().toISOString().split("T")[0]}.json`
-    );
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-
-  const handleImport = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      try {
-        const json = JSON.parse(e.target?.result as string) as BackupData;
-        if (!json.boardData && !json.categories) {
-          alert("Invalid backup file: Missing board data.");
-          return;
-        }
-        trackActivity();
-        await DatabaseService.restoreBackup(
-          json.boardData || {},
-          json.categories || {}
-        );
-        setIsImportExportDialogOpen(false);
-        alert("Board restored successfully!");
-      } catch (err) {
-        console.error(err);
-        alert("Failed to parse backup file.");
-      }
-    };
-    reader.readAsText(file);
-  };
-
   if (!user) {
     return <Login onLogin={handleLogin} />;
   }
@@ -201,7 +152,6 @@ export default function App() {
 
       <AppSettingsMenu
         onLogout={handleLogout}
-        onOpenImportExport={() => setIsImportExportDialogOpen(true)}
         onOpenAddWorker={() => setIsAddWorkerDialogOpen(true)}
       />
 
@@ -240,21 +190,8 @@ export default function App() {
         boardData={boardData}
         onApply={handleApplyCategory}
       />
-      
-      {isCustomColorsDialogOpen && (
-        <CustomColorsDialog 
-          onClose={() => setIsCustomColorsDialogOpen(false)}
-          onSave={(colors) => DatabaseService.saveCustomPalette(colors)}
-        />
-      )}
-
-      {isImportExportDialogOpen && (
-        <ImportExportDialog
-          onClose={() => setIsImportExportDialogOpen(false)}
-          onExport={handleExport}
-          onImport={handleImport}
-        />
-      )}
+      <CustomColorsDialog />
+      <ImportExportDialog boardData={boardData} />
     </div>
   );
 }

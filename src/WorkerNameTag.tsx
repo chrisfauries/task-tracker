@@ -14,7 +14,7 @@ export const WorkerNameTag: React.FC<WorkerNameTagProps> = ({
   onDelete,
 }) => {
   return (
-    <div className="sticky left-0 bg-slate-50 z-30 pl-2 pr-2 flex-none w-12">
+    <div className="sticky left-0 bg-slate-50 z-30 pl-1 pr-1 flex-none w-8">
       <div
         className="bg-white border border-slate-200 rounded-lg flex items-center justify-center shadow-md h-full group relative overflow-hidden cursor-pointer hover:bg-slate-50 transition-colors"
         onDoubleClick={() => onEdit(workerId, workerName)}

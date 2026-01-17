@@ -34,7 +34,7 @@ export function Board({
   onDeleteWorker,
 }: BoardProps) {
   return (
-    <div className="flex-1 overflow-auto py-3">
+    <div className="flex-1 overflow-auto py-2">
       <div className="min-w-[100%] flex flex-col">
         {/* Column Headers */}
         <div className="flex mb-2 items-center">
