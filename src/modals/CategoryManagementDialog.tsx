@@ -192,7 +192,7 @@ interface CategoryListItemProps {
   onRename: (newName: string) => void;
 }
 
-function CategoryListItem({ id, name, color, isSelected, onSelect, onDelete, onRename }: CategoryListItemProps) {
+function CategoryListItem({  name, color, isSelected, onSelect, onDelete, onRename }: CategoryListItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [renameValue, setRenameValue] = useState(name);
@@ -312,7 +312,7 @@ interface CategoryEditorProps {
   onApply: (workerId: string, colIndex: number) => void;
 }
 
-function CategoryEditor({ category, categoryId, boardData, onUpdateItems, onUpdateColor, onApply }: CategoryEditorProps) {
+function CategoryEditor({ category, boardData, onUpdateItems, onUpdateColor, onApply }: CategoryEditorProps) {
   return (
     <div className="space-y-8">
       <ColorPicker currentColor={category.color} onPick={onUpdateColor} />
@@ -367,7 +367,7 @@ function ItemsList({ items, onUpdate }: { items: string[]; onUpdate: (items: str
     onUpdate([...items, "New Item"]);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, idx: number) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
       e.preventDefault();
       const newItems = [...items, ""];

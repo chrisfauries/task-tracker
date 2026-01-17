@@ -1,4 +1,3 @@
-import React from "react";
 import { DropZone } from "./DropZone";
 import { WorkerNameTag } from "./WorkerNameTag";
 import type { User } from "firebase/auth";

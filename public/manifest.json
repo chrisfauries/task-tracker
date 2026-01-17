@@ -1,0 +1,23 @@
+{
+  "name": "Band Task Tracker",
+  "short_name": "TaskTracker",
+  "description": "Collaborative task tracking for band directors",
+  "theme_color": "#f8fafc",
+  "background_color": "#f8fafc",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

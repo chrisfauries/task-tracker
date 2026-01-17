@@ -12,7 +12,6 @@ import {
   onDisconnect,
   orderByChild,
   limitToLast,
-  serverTimestamp,
 } from "firebase/database";
 import type { User } from "firebase/auth";
 

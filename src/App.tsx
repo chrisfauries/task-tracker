@@ -25,7 +25,6 @@ import {
   DeleteWorkerDialog,
 } from "./modals/WorkerModals";
 import {
-  isAddWorkerDialogOpenAtom,
   isEditWorkerDialogOpenAtom,
   editingWorkerAtom,
   isDeleteWorkerDialogOpenAtom,
