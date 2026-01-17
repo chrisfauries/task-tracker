@@ -1,8 +1,9 @@
 import React, { useState, useRef } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
-import { isImportExportDialogOpenAtom, categoriesAtom } from "../atoms";
+import { isImportExportDialogOpenAtom, categoriesAtom, customPaletteAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 import type { BoardData, BackupData } from "../types";
+import { DEFAULT_PALETTE_HEX } from "../constants";
 
 interface ImportExportDialogProps {
   boardData: BoardData;
@@ -19,6 +20,7 @@ export function ImportExportDialog({ boardData }: ImportExportDialogProps) {
 function ImportExportDialogContent({ boardData }: { boardData: BoardData }) {
   const setIsOpen = useSetAtom(isImportExportDialogOpenAtom);
   const categories = useAtomValue(categoriesAtom);
+  const customColors = useAtomValue(customPaletteAtom);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmingImport, setConfirmingImport] = useState<File | null>(null);
@@ -31,6 +33,7 @@ function ImportExportDialogContent({ boardData }: { boardData: BoardData }) {
       timestamp: Date.now(),
       boardData,
       categories,
+      customColors
     };
     const dataStr =
       "data:text/json;charset=utf-8," +
@@ -58,7 +61,8 @@ function ImportExportDialogContent({ boardData }: { boardData: BoardData }) {
         
         await DatabaseService.restoreBackup(
           json.boardData || {},
-          json.categories || {}
+          json.categories || {},
+          json.customColors || DEFAULT_PALETTE_HEX
         );
         setIsOpen(false);
         alert("Board restored successfully!");

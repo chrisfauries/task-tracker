@@ -333,9 +333,9 @@ describe("DatabaseService", () => {
       expect(remove).toHaveBeenCalled();
     });
 
-    it("restoreBackup overwrites boardData and categories", async () => {
+    it("restoreBackup overwrites boardData and categories and customPalette", async () => {
       await DatabaseService.restoreBackup({}, {});
-      expect(set).toHaveBeenCalledTimes(2);
+      expect(set).toHaveBeenCalledTimes(3);
     });
   });
 });

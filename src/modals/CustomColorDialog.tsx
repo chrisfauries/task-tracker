@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { customPaletteAtom, isCustomColorsDialogOpenAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
+import { DEFAULT_PALETTE_HEX } from "../constants";
 
 export function CustomColorsDialog() {
   const isOpen = useAtomValue(isCustomColorsDialogOpenAtom);
@@ -23,11 +24,6 @@ function CustomColorsDialogContent() {
   const [colors, setColors] = useState<string[]>(currentPalette);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
-  // Default fallback if reset is needed
-  const DEFAULT_PALETTE = [
-    "#10B981", "#3B82F6", "#EAB308", "#EF4444", "#F97316", "#A855F7", "#EC4899"
-  ];
-
   const handleClose = () => setIsOpen(false);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -37,7 +33,7 @@ function CustomColorsDialogContent() {
   };
 
   const handleReset = () => {
-    setColors(DEFAULT_PALETTE);
+    setColors(DEFAULT_PALETTE_HEX);
   };
 
   const handleSave = () => {

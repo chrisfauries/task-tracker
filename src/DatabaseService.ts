@@ -11,7 +11,6 @@ import {
   limitToLast,
   onDisconnect,
   serverTimestamp,
-
 } from "firebase/database";
 import type { Unsubscribe } from "firebase/auth";
 import { db } from "./firebase";
@@ -25,7 +24,7 @@ import type {
   SavedSnapshot,
   SnapshotsData,
   WorkerData,
-  Category
+  Category,
 } from "./types";
 
 export class DatabaseService {
@@ -33,11 +32,15 @@ export class DatabaseService {
   // Data Subscriptions
   // ==========================================
 
-  static subscribeToBoardData(callback: (data: BoardData) => void): Unsubscribe {
+  static subscribeToBoardData(
+    callback: (data: BoardData) => void
+  ): Unsubscribe {
     return onValue(ref(db, "boarddata"), (snap) => callback(snap.val() || {}));
   }
 
-  static subscribeToCategories(callback: (data: CategoriesData) => void): Unsubscribe {
+  static subscribeToCategories(
+    callback: (data: CategoriesData) => void
+  ): Unsubscribe {
     return onValue(ref(db, "categories"), (snap) => callback(snap.val() || {}));
   }
 
@@ -45,12 +48,20 @@ export class DatabaseService {
     return onValue(ref(db, "locks"), (snap) => callback(snap.val() || {}));
   }
 
-  static subscribeToPresence(callback: (data: AllPresenceData) => void): Unsubscribe {
+  static subscribeToPresence(
+    callback: (data: AllPresenceData) => void
+  ): Unsubscribe {
     return onValue(ref(db, "presence"), (snap) => callback(snap.val() || {}));
   }
 
-  static subscribeToSnapshots(callback: (data: SnapshotsData) => void): Unsubscribe {
-    const q = query(ref(db, "snapshots"), orderByChild("timestamp"), limitToLast(50));
+  static subscribeToSnapshots(
+    callback: (data: SnapshotsData) => void
+  ): Unsubscribe {
+    const q = query(
+      ref(db, "snapshots"),
+      orderByChild("timestamp"),
+      limitToLast(50)
+    );
     return onValue(q, (snap) => callback(snap.val() || {}));
   }
 
@@ -62,8 +73,12 @@ export class DatabaseService {
     await set(ref(db, "customPalette"), colors);
   }
 
-  static subscribeToCustomPalette(callback: (colors: string[]) => void): Unsubscribe {
-    return onValue(ref(db, "customPalette"), (snap) => callback(snap.val() || []));
+  static subscribeToCustomPalette(
+    callback: (colors: string[]) => void
+  ): Unsubscribe {
+    return onValue(ref(db, "customPalette"), (snap) =>
+      callback(snap.val() || [])
+    );
   }
 
   // ==========================================
@@ -75,13 +90,20 @@ export class DatabaseService {
     return snap.exists() ? snap.val() : null;
   }
 
-  static async createNote(workerId: string, noteData: Note): Promise<string | null> {
+  static async createNote(
+    workerId: string,
+    noteData: Note
+  ): Promise<string | null> {
     const newRef = push(ref(db, `boarddata/${workerId}/notes`));
     await set(newRef, noteData);
     return newRef.key;
   }
 
-  static async addNote(workerId: string, noteId: string, noteData: Note): Promise<void> {
+  static async addNote(
+    workerId: string,
+    noteId: string,
+    noteData: Note
+  ): Promise<void> {
     await set(ref(db, `boarddata/${workerId}/notes/${noteId}`), noteData);
   }
 
@@ -89,16 +111,32 @@ export class DatabaseService {
     await remove(ref(db, `boarddata/${workerId}/notes/${noteId}`));
   }
 
-  static async updateNoteText(workerId: string, noteId: string, text: string): Promise<void> {
+  static async updateNoteText(
+    workerId: string,
+    noteId: string,
+    text: string
+  ): Promise<void> {
     await set(ref(db, `boarddata/${workerId}/notes/${noteId}/text`), text);
   }
 
-  static async updateNoteColor(workerId: string, noteId: string, color: number): Promise<void> {
+  static async updateNoteColor(
+    workerId: string,
+    noteId: string,
+    color: number
+  ): Promise<void> {
     await set(ref(db, `boarddata/${workerId}/notes/${noteId}/color`), color);
   }
 
-  static async updateNoteCategory(workerId: string, noteId: string, categoryName: string, color: number): Promise<void> {
-    await update(ref(db, `boarddata/${workerId}/notes/${noteId}`), { categoryName, color });
+  static async updateNoteCategory(
+    workerId: string,
+    noteId: string,
+    categoryName: string,
+    color: number
+  ): Promise<void> {
+    await update(ref(db, `boarddata/${workerId}/notes/${noteId}`), {
+      categoryName,
+      color,
+    });
   }
 
   static async moveNote(
@@ -145,7 +183,10 @@ export class DatabaseService {
     await push(ref(db, "boarddata"), { name, notes: {}, defaultColor });
   }
 
-  static async updateWorker(workerId: string, data: Partial<WorkerData>): Promise<void> {
+  static async updateWorker(
+    workerId: string,
+    data: Partial<WorkerData>
+  ): Promise<void> {
     await update(ref(db, `boarddata/${workerId}`), data);
   }
 
@@ -157,13 +198,20 @@ export class DatabaseService {
   // Category Operations
   // ==========================================
 
-  static async createCategory(name: string, color: number = 0, order: number = 0): Promise<string | null> {
+  static async createCategory(
+    name: string,
+    color: number = 0,
+    order: number = 0
+  ): Promise<string | null> {
     const newRef = push(ref(db, "categories"));
     await set(newRef, { name, items: [], color, order });
     return newRef.key;
   }
 
-  static async updateCategory(id: string, data: Partial<Category>): Promise<void> {
+  static async updateCategory(
+    id: string,
+    data: Partial<Category>
+  ): Promise<void> {
     await update(ref(db, `categories/${id}`), data);
   }
 
@@ -204,10 +252,14 @@ export class DatabaseService {
       const snapshot = await get(query(snapRef, orderByChild("timestamp")));
       if (snapshot.exists()) {
         const data = snapshot.val() as SnapshotsData;
-        const entries = Object.entries(data).sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const entries = Object.entries(data).sort(
+          (a, b) => a[1].timestamp - b[1].timestamp
+        );
         if (entries.length >= 100) {
           const updates: Record<string, null> = {};
-          entries.slice(0, entries.length - 99).forEach(([key]) => (updates[key] = null));
+          entries
+            .slice(0, entries.length - 99)
+            .forEach(([key]) => (updates[key] = null));
           await update(snapRef, updates);
         }
       }
@@ -230,8 +282,13 @@ export class DatabaseService {
     await remove(ref(db, `snapshots/${snapshotId}`));
   }
 
-  static async restoreBackup(boardData: BoardData, categories: CategoriesData): Promise<void> {
+  static async restoreBackup(
+    boardData: BoardData,
+    categories: CategoriesData,
+    customColors: string[]
+  ): Promise<void> {
     await set(ref(db, "boarddata"), boardData || {});
     await set(ref(db, "categories"), categories || {});
+    await set(ref(db, "customPalette"), customColors);
   }
 }

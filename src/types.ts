@@ -102,6 +102,7 @@ export interface BackupData {
   timestamp: number;
   boardData: BoardData;
   categories: CategoriesData;
+  customColors: string[];
 }
 
 export interface AddToCategoryTarget {
