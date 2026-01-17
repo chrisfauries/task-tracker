@@ -4,23 +4,23 @@ import {
   isSnapshotDialogOpenAtom, 
   isCategoryManagementDialogOpenAtom, 
   isCustomColorsDialogOpenAtom,
-  isImportExportDialogOpenAtom 
+  isImportExportDialogOpenAtom, 
+  isAddWorkerDialogOpenAtom
 } from "./atoms";
 
 interface AppSettingsMenuProps {
   onLogout: () => void;
-  onOpenAddWorker: () => void;
 }
 
 export const AppSettingsMenu = ({
   onLogout,
-  onOpenAddWorker,
 }: AppSettingsMenuProps) => {
   const [position, setPosition] = useAtom(appSettingsMenuPosAtom);
   const setIsSnapshotOpen = useSetAtom(isSnapshotDialogOpenAtom);
   const setIsCategoryDialogOpen = useSetAtom(isCategoryManagementDialogOpenAtom);
   const setIsCustomColorsDialogOpen = useSetAtom(isCustomColorsDialogOpenAtom);
   const setIsImportExportDialogOpen = useSetAtom(isImportExportDialogOpenAtom);
+    const setIsAddWorkerDialogOpen = useSetAtom(isAddWorkerDialogOpenAtom);
 
   if (!position) return null;
 
@@ -68,7 +68,7 @@ export const AppSettingsMenu = ({
         </button>
 
         <button
-          onClick={() => handleAction(onOpenAddWorker)}
+          onClick={() => handleAction(() => setIsAddWorkerDialogOpen(true))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700 text-emerald-600"
         >
           Add Worker

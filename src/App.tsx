@@ -51,7 +51,6 @@ export default function App() {
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
 
   // Modal States
-  const setIsAddWorkerDialogOpen = useSetAtom(isAddWorkerDialogOpenAtom);
   const setIsEditWorkerDialogOpen = useSetAtom(isEditWorkerDialogOpenAtom);
   const setEditingWorker = useSetAtom(editingWorkerAtom);
   const setIsDeleteWorkerDialogOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
@@ -152,7 +151,6 @@ export default function App() {
 
       <AppSettingsMenu
         onLogout={handleLogout}
-        onOpenAddWorker={() => setIsAddWorkerDialogOpen(true)}
       />
 
       <TopBanner

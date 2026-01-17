@@ -2,6 +2,7 @@ import type { User } from "firebase/auth";
 import type { HistoryAction, AllPresenceData } from "./types";
 import { UndoRedoControls } from "./UndoRedoControls";
 import { AvatarList } from "./AvatarList";
+import { SearchAndFilter } from "./SearchAndFilter";
 import { useSetAtom } from "jotai";
 import { appSettingsMenuPosAtom } from "./atoms";
 
@@ -49,6 +50,8 @@ export function TopBanner({
           presence={presence}
           className="mr-4 border-r pr-4 border-slate-200"
         />
+
+        <SearchAndFilter />
 
         <button
           onClick={(e) => {

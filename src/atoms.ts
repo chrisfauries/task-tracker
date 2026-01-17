@@ -61,6 +61,10 @@ export const isCustomColorsDialogOpenAtom = atom(false);
 // Import/Export Dialog Atom
 export const isImportExportDialogOpenAtom = atom(false);
 
+// Search and Filter Atoms (Non-persistent)
+export const searchQueryAtom = atom("");
+export const selectedCategoriesAtom = atom<string[]>([]);
+
 // Custom Palette Atom
 // Defaults match the CSS defaults
 const DEFAULT_PALETTE = [

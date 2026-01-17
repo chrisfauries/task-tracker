@@ -1,11 +1,11 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { DatabaseService } from "./DatabaseService";
 import { getNoteStyles } from "./constants";
 import type { User } from "firebase/auth";
 import type { LocksData, HistoryAction } from "./types";
 import { NoteMenu } from "./NoteMenu";
-import { useSetAtom } from "jotai";
-import { addToCategoryTargetAtom, contextMenuPosAtom } from "./atoms";
+import { useSetAtom, useAtomValue } from "jotai";
+import { addToCategoryTargetAtom, contextMenuPosAtom, searchQueryAtom, selectedCategoriesAtom } from "./atoms";
 
 interface StickyNoteProps {
   id: string;
@@ -56,6 +56,11 @@ export function StickyNote({
 }: StickyNoteProps) {
   const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
   const setContextMenuPos = useSetAtom(contextMenuPosAtom);
+  
+  // Search & Filter State
+  const searchQuery = useAtomValue(searchQueryAtom);
+  const selectedCategories = useAtomValue(selectedCategoriesAtom);
+
   const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
     null
   );
@@ -69,6 +74,16 @@ export function StickyNote({
   const isLockValid = lock && now - lock.timestamp < 2 * 60 * 1000;
   const isLockedByOther = isLockValid && lock.userId !== currentUser?.uid;
   const lockedByName = isLockedByOther ? lock.userName : null;
+
+  // Calculate if filtered out
+  const isFilteredOut = useMemo(() => {
+    if (!searchQuery && selectedCategories.length === 0) return false;
+
+    const matchesSearch = !searchQuery || text.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategories.length === 0 || (categoryName && selectedCategories.includes(categoryName));
+
+    return !(matchesSearch && matchesCategory);
+  }, [searchQuery, selectedCategories, text, categoryName]);
 
   const acquireLock = async () => {
     if (!currentUser) return false;
@@ -279,7 +294,7 @@ export function StickyNote({
         className={`
           ${styles.text}
           p-0 rotate-[-0.5deg] border-l-4 min-h-[90px] aspect-square flex flex-col transition-all group/note relative overflow-hidden
-          ${isDragging ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
+          ${isDragging || isFilteredOut ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
           ${
             isEditing
               ? "ring-4 ring-cyan-400 shadow-2xl scale-[1.02] rotate-0 z-20 cursor-text"
@@ -289,6 +304,21 @@ export function StickyNote({
           }
         `}
       >
+        {isFilteredOut && (
+          <div 
+            className="absolute inset-0 z-50 pointer-events-none"
+            style={{
+              backgroundImage: `repeating-linear-gradient(
+                45deg,
+                rgba(0, 0, 0, 0.05),
+                rgba(0, 0, 0, 0.05) 10px,
+                rgba(0, 0, 0, 0.1) 10px,
+                rgba(0, 0, 0, 0.1) 20px
+              )`
+            }}
+          />
+        )}
+
         {isLockedByOther && (
           <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-[1px] z-40 flex flex-col items-center justify-center rounded-sm">
             <span className="text-2xl mb-1">🔒</span>
