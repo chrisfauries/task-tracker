@@ -85,6 +85,10 @@ export function StickyNote({
     return !(matchesSearch && matchesCategory);
   }, [searchQuery, selectedCategories, text, categoryName]);
 
+  // Determine if this note should be highlighted (Matches filter/search and isn't currently being dragged)
+  const hasActiveFilter = !!searchQuery || selectedCategories.length > 0;
+  const isHighlighted = hasActiveFilter && !isFilteredOut && !isDragging;
+
   const acquireLock = async () => {
     if (!currentUser) return false;
     await DatabaseService.acquireLock(id, currentUser);
@@ -300,7 +304,11 @@ export function StickyNote({
               ? "ring-4 ring-cyan-400 shadow-2xl scale-[1.02] rotate-0 z-20 cursor-text"
               : isLockedByOther
               ? "cursor-not-allowed opacity-80"
-              : "shadow-sm hover:shadow-md cursor-grab"
+              : isFilteredOut
+              ? "shadow-sm" 
+              : `${
+                  isHighlighted ? "shadow-xl z-10" : "shadow-sm"
+                } hover:shadow-xl hover:scale-[1.02] cursor-grab`
           }
         `}
       >
