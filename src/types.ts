@@ -22,6 +22,7 @@ export interface Category {
   name: string;
   items: string[];
   color?: number; 
+  order?: number;
 }
 
 export interface LockData {

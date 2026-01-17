@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { DatabaseService } from "../DatabaseService";
 import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
@@ -35,7 +35,11 @@ function CategoryManagementDialogContent({
 
   const handleCreate = async (name: string) => {
     if (!name.trim()) return;
-    await DatabaseService.createCategory(name);
+    
+    const currentOrders = Object.values(categories).map(c => c.order || 0);
+    const maxOrder = currentOrders.length > 0 ? Math.max(...currentOrders) : -1;
+    
+    await DatabaseService.createCategory(name, 0, maxOrder + 1);
   };
 
   const handleDelete = async (id: string) => {
@@ -57,9 +61,27 @@ function CategoryManagementDialogContent({
     await DatabaseService.updateCategory(id, { color });
   };
 
+  const handleMove = async (sortedIds: string[], index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === sortedIds.length - 1) return;
+
+    const targetId = sortedIds[index];
+    const swapIndex = direction === 'up' ? index - 1 : index + 1;
+    const swapId = sortedIds[swapIndex];
+
+    const targetOrder = categories[targetId].order ?? 0;
+    const swapOrder = categories[swapId].order ?? 0;
+
+    // Perform the swap in database
+    await Promise.all([
+      DatabaseService.updateCategory(targetId, { order: swapOrder }),
+      DatabaseService.updateCategory(swapId, { order: targetOrder })
+    ]);
+  };
+
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden relative animate-in fade-in zoom-in duration-200">
+      <div className="bg-white rounded-2xl shadow-2xl w-[80%] max-w-[80%] max-h-[90vh] flex flex-col overflow-hidden relative animate-in fade-in zoom-in duration-200">
         
         <SuccessNotification 
           message={successMessage} 
@@ -81,6 +103,7 @@ function CategoryManagementDialogContent({
             onCreate={handleCreate}
             onDelete={handleDelete}
             onRename={handleRename}
+            onMove={handleMove}
           />
 
           <div className="flex-1 p-8 bg-white overflow-y-auto">
@@ -139,10 +162,22 @@ interface CategorySidebarProps {
   onCreate: (name: string) => void;
   onDelete: (id: string) => void;
   onRename: (id: string, newName: string) => void;
+  onMove: (sortedIds: string[], index: number, direction: 'up' | 'down') => void;
 }
 
-function CategorySidebar({ categories, selectedId, onSelect, onCreate, onDelete, onRename }: CategorySidebarProps) {
+function CategorySidebar({ categories, selectedId, onSelect, onCreate, onDelete, onRename, onMove }: CategorySidebarProps) {
   const [newCatName, setNewCatName] = useState("");
+
+  const sortedCategories = useMemo(() => {
+    return Object.entries(categories)
+      .sort(([, a], [, b]) => {
+        const orderA = a.order ?? 0;
+        const orderB = b.order ?? 0;
+        return orderA - orderB;
+      });
+  }, [categories]);
+
+  const sortedIds = sortedCategories.map(([id]) => id);
 
   const handleCreateClick = () => {
     onCreate(newCatName);
@@ -165,7 +200,7 @@ function CategorySidebar({ categories, selectedId, onSelect, onCreate, onDelete,
       </div>
 
       <div className="space-y-2">
-        {Object.entries(categories).map(([id, cat]) => (
+        {sortedCategories.map(([id, cat], index) => (
           <CategoryListItem
             key={id}
             id={id}
@@ -175,6 +210,10 @@ function CategorySidebar({ categories, selectedId, onSelect, onCreate, onDelete,
             onSelect={() => onSelect(id)}
             onDelete={() => onDelete(id)}
             onRename={(newName) => onRename(id, newName)}
+            onMoveUp={() => onMove(sortedIds, index, 'up')}
+            onMoveDown={() => onMove(sortedIds, index, 'down')}
+            isFirst={index === 0}
+            isLast={index === sortedCategories.length - 1}
           />
         ))}
       </div>
@@ -190,9 +229,24 @@ interface CategoryListItemProps {
   onSelect: () => void;
   onDelete: () => void;
   onRename: (newName: string) => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+  isFirst: boolean;
+  isLast: boolean;
 }
 
-function CategoryListItem({  name, color, isSelected, onSelect, onDelete, onRename }: CategoryListItemProps) {
+function CategoryListItem({ 
+  name, 
+  color, 
+  isSelected, 
+  onSelect, 
+  onDelete, 
+  onRename,
+  onMoveUp,
+  onMoveDown,
+  isFirst,
+  isLast
+}: CategoryListItemProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [renameValue, setRenameValue] = useState(name);
@@ -277,11 +331,31 @@ function CategoryListItem({  name, color, isSelected, onSelect, onDelete, onRena
   return (
     <div
       onClick={onSelect}
-      className={`p-4 rounded-xl cursor-pointer transition border flex justify-between items-center group ${
+      className={`p-4 rounded-xl cursor-pointer transition border flex justify-between items-center group relative ${
         isSelected ? "bg-indigo-50 border-indigo-200" : "hover:bg-slate-50 border-transparent"
       }`}
     >
       <div className="flex items-center gap-3">
+        {/* Sort Buttons */}
+        <div className="flex flex-col gap-0.5 -ml-1" onClick={(e) => e.stopPropagation()}>
+            <button 
+                onClick={onMoveUp}
+                disabled={isFirst}
+                className={`text-[8px] leading-none p-0.5 rounded ${isFirst ? 'text-slate-200' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                title="Move Up"
+            >
+                ▲
+            </button>
+            <button 
+                onClick={onMoveDown}
+                disabled={isLast}
+                className={`text-[8px] leading-none p-0.5 rounded ${isLast ? 'text-slate-200' : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'}`}
+                title="Move Down"
+            >
+                ▼
+            </button>
+        </div>
+
         <div className={`w-3 h-3 rounded-full ${getSolidColorClass(color)}`} />
         <span className="font-bold text-slate-700">{name}</span>
       </div>

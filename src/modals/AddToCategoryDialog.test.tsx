@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { AddToCategoryDialog } from "./AddToCategoryDialog";
 import { DatabaseService } from "../DatabaseService";
 import { Provider, createStore } from "jotai";
@@ -138,7 +138,11 @@ describe("AddToCategoryDialog", () => {
       ...mockCategories,
       newCatId: { name: "Urgent", items: [], color: 0 },
     };
-    store.set(categoriesAtom, newCategories);
+    
+    // Wrap state updates in act to fix the warning
+    act(() => {
+      store.set(categoriesAtom, newCategories);
+    });
 
     // Wait for the effect to trigger selection
     await waitFor(() => {
@@ -196,6 +200,9 @@ describe("AddToCategoryDialog", () => {
   });
 
   it("handles creation errors gracefully", async () => {
+    // Suppress console.error for this test as we expect an error log
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     (DatabaseService.createCategory as any).mockRejectedValue(
       new Error("Network Error")
     );
@@ -211,5 +218,7 @@ describe("AddToCategoryDialog", () => {
       expect(screen.getByText("Create and Add")).toBeInTheDocument();
       expect(screen.getByText("Create and Add")).not.toBeDisabled();
     });
+
+    consoleSpy.mockRestore();
   });
 });

@@ -157,9 +157,9 @@ export class DatabaseService {
   // Category Operations
   // ==========================================
 
-  static async createCategory(name: string, color: number = 0): Promise<string | null> {
+  static async createCategory(name: string, color: number = 0, order: number = 0): Promise<string | null> {
     const newRef = push(ref(db, "categories"));
-    await set(newRef, { name, items: [], color });
+    await set(newRef, { name, items: [], color, order });
     return newRef.key;
   }
 

@@ -21,8 +21,15 @@ describe("CategoryManagementDialog", () => {
   const onApplyMock = vi.fn();
 
   const mockCategories: CategoriesData = {
-    "cat-1": { name: "Math", color: 0, items: ["Algebra", "Geometry"] }, // 0 = Green
-    "cat-2": { name: "Science", color: 1, items: ["Physics"] }, // 1 = Blue
+    "cat-1": { name: "Math", color: 0, items: ["Algebra", "Geometry"], order: 0 }, 
+    "cat-2": { name: "Science", color: 1, items: ["Physics"], order: 1 }, 
+  };
+
+  // Extended mock data for sorting tests
+  const mockCategoriesUnordered: any = {
+    "cat-1": { name: "First", items: [], order: 0 },
+    "cat-2": { name: "Second", items: [], order: 1 },
+    "cat-3": { name: "Third", items: [], order: 2 },
   };
 
   const mockBoardData: BoardData = {
@@ -91,7 +98,8 @@ describe("CategoryManagementDialog", () => {
       fireEvent.click(addBtn);
 
       await waitFor(() => {
-        expect(DatabaseService.createCategory).toHaveBeenCalledWith("History");
+        // Mock categories max order is 1, so new one should be 2
+        expect(DatabaseService.createCategory).toHaveBeenCalledWith("History", 0, 2);
       });
     });
 
@@ -192,6 +200,70 @@ describe("CategoryManagementDialog", () => {
         expect(DatabaseService.deleteCategory).not.toHaveBeenCalled();
         expect(screen.queryByText("Delete this?")).not.toBeInTheDocument();
       });
+    });
+  });
+
+  describe("Sidebar (Sorting)", () => {
+    beforeEach(() => {
+      store.set(categoriesAtom, mockCategoriesUnordered);
+    });
+
+    it("renders items in sorted order", () => {
+      renderDialog();
+      const items = screen.getAllByText(/First|Second|Third/);
+      expect(items[0]).toHaveTextContent("First");
+      expect(items[1]).toHaveTextContent("Second");
+      expect(items[2]).toHaveTextContent("Third");
+    });
+
+    it("moves item up when up arrow clicked", async () => {
+      renderDialog();
+      const upBtns = screen.getAllByTitle("Move Up");
+      
+      // Index 0: First (Up disabled)
+      // Index 1: Second (Up enabled)
+      // Click Up on Second
+      fireEvent.click(upBtns[1]);
+
+      await waitFor(() => {
+        // Second (cat-2) should swap order with First (cat-1)
+        // cat-2 was order 1 -> becomes 0
+        // cat-1 was order 0 -> becomes 1
+        expect(DatabaseService.updateCategory).toHaveBeenCalledWith("cat-2", { order: 0 });
+        expect(DatabaseService.updateCategory).toHaveBeenCalledWith("cat-1", { order: 1 });
+      });
+    });
+
+    it("moves item down when down arrow clicked", async () => {
+      renderDialog();
+      const downBtns = screen.getAllByTitle("Move Down");
+      
+      // Index 0: First (Down enabled)
+      // Click Down on First
+      fireEvent.click(downBtns[0]);
+
+      await waitFor(() => {
+        // First (cat-1) should swap order with Second (cat-2)
+        // cat-1 was order 0 -> becomes 1
+        // cat-2 was order 1 -> becomes 0
+        expect(DatabaseService.updateCategory).toHaveBeenCalledWith("cat-1", { order: 1 });
+        expect(DatabaseService.updateCategory).toHaveBeenCalledWith("cat-2", { order: 0 });
+      });
+    });
+
+    it("disables 'Up' on first item", () => {
+      renderDialog();
+      const upBtns = screen.getAllByTitle("Move Up");
+      expect(upBtns[0]).toBeDisabled();
+      expect(upBtns[1]).not.toBeDisabled();
+    });
+
+    it("disables 'Down' on last item", () => {
+      renderDialog();
+      const downBtns = screen.getAllByTitle("Move Down");
+      const lastIndex = downBtns.length - 1;
+      expect(downBtns[lastIndex]).toBeDisabled();
+      expect(downBtns[lastIndex - 1]).not.toBeDisabled();
     });
   });
 

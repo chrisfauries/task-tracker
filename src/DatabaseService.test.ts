@@ -220,10 +220,10 @@ describe("DatabaseService", () => {
       expect(push).toHaveBeenCalled();
 
       // 2. set called with the ref from push, and the data
-      // Default color is 0 (Green)
+      // Default color is 0 (Green), default order is 0
       expect(set).toHaveBeenCalledWith(
         expect.objectContaining({ key: result }),
-        { name, items: [], color: 0 } 
+        { name, items: [], color: 0, order: 0 } 
       );
 
       // 3. result matches the key format
@@ -240,9 +240,10 @@ describe("DatabaseService", () => {
       expect(push).toHaveBeenCalled();
 
       // 2. set called with the ref from push, and the data
+      // Default order is 0
       expect(set).toHaveBeenCalledWith(
         expect.objectContaining({ key: result }),
-        { name, items: [], color: 3 }
+        { name, items: [], color: 3, order: 0 }
       );
 
       // 3. result matches the key format
