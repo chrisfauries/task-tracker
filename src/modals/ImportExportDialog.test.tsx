@@ -30,6 +30,11 @@ describe("ImportExportDialog", () => {
   const mockCategories: CategoriesData = {
     "c1": { name: "Category 1", items: [], color: 1 }
   };
+  
+  // Default palette expected by restoreBackup if none provided in file
+  const DEFAULT_PALETTE = [
+    "#10B981", "#3B82F6", "#EAB308", "#EF4444", "#F97316", "#A855F7", "#EC4899"
+  ];
 
   beforeEach(() => {
     store = createStore();
@@ -201,7 +206,8 @@ describe("ImportExportDialog", () => {
         await waitFor(() => {
             expect(DatabaseService.restoreBackup).toHaveBeenCalledWith(
                 validBackup.boardData,
-                validBackup.categories
+                validBackup.categories,
+                DEFAULT_PALETTE // Expect the default palette as the 3rd arg
             );
             expect(mockAlert).toHaveBeenCalledWith("Board restored successfully!");
             expect(store.get(isImportExportDialogOpenAtom)).toBe(false);

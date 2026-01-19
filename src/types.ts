@@ -10,6 +10,7 @@ export interface Note {
   color?: number; 
   position: number;
   categoryName?: string;
+  dueDate?: string; // YYYY-MM-DD
 }
 
 export interface WorkerData {
@@ -110,4 +111,5 @@ export interface AddToCategoryTarget {
   workerId: string;
   text: string;
   color?: number; 
+  dueDate?: string;
 }

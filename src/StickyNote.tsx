@@ -5,16 +5,22 @@ import type { User } from "firebase/auth";
 import type { LocksData, HistoryAction } from "./types";
 import { NoteMenu } from "./NoteMenu";
 import { useSetAtom, useAtomValue } from "jotai";
-import { addToCategoryTargetAtom, contextMenuPosAtom, searchQueryAtom, selectedCategoriesAtom } from "./atoms";
+import {
+  addToCategoryTargetAtom,
+  contextMenuPosAtom,
+  searchQueryAtom,
+  selectedCategoriesAtom,
+} from "./atoms";
 
 interface StickyNoteProps {
   id: string;
   text: string;
   workerId: string;
-  color?: number; 
+  color?: number;
   column: number;
   position: number;
   categoryName?: string;
+  dueDate?: string;
   prevPos: number | null;
   nextPos: number | null;
   onReorder: (
@@ -34,12 +40,54 @@ interface StickyNoteProps {
   onHistory: (action: HistoryAction) => void;
 }
 
+// Helper to format due date label
+function getDueDateLabel(
+  dateString: string | undefined
+): { label: string; status: "past" | "today" | "tomorrow" | "future" } | null {
+  if (!dateString) return null;
+
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Parse YYYY-MM-DD
+  const [y, m, d] = dateString.split("-").map(Number);
+  const due = new Date(y, m - 1, d);
+
+  const diffTime = due.getTime() - today.getTime();
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+  if (diffDays < 0) return { label: `-${Math.abs(diffDays)}d`, status: "past" };
+  if (diffDays === 0) return { label: "Today", status: "today" };
+  if (diffDays === 1) return { label: "Tomorrow", status: "tomorrow" };
+
+  // Future (2+ days)
+  if (diffDays < 7) return { label: `+${diffDays}d`, status: "future" };
+  const weeks = Math.floor(diffDays / 7);
+  const days = diffDays % 7;
+  return {
+    label: days === 0 ? `+${weeks}w` : `+${weeks}w${days}d`,
+    status: "future",
+  };
+}
+
+function getDueDateBackgroundTranparency(column: number) {
+  switch (column) {
+    case 0:
+      return "50%";
+    case 1:
+      return "15%";
+    default:
+      return "80%";
+  }
+}
+
 export function StickyNote({
   id,
   text,
   color,
   column,
   categoryName,
+  dueDate,
   workerId,
   position,
   prevPos,
@@ -56,7 +104,7 @@ export function StickyNote({
 }: StickyNoteProps) {
   const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
   const setContextMenuPos = useSetAtom(contextMenuPosAtom);
-  
+
   // Search & Filter State
   const searchQuery = useAtomValue(searchQueryAtom);
   const selectedCategories = useAtomValue(selectedCategoriesAtom);
@@ -79,8 +127,11 @@ export function StickyNote({
   const isFilteredOut = useMemo(() => {
     if (!searchQuery && selectedCategories.length === 0) return false;
 
-    const matchesSearch = !searchQuery || text.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategories.length === 0 || (categoryName && selectedCategories.includes(categoryName));
+    const matchesSearch =
+      !searchQuery || text.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory =
+      selectedCategories.length === 0 ||
+      (categoryName && selectedCategories.includes(categoryName));
 
     return !(matchesSearch && matchesCategory);
   }, [searchQuery, selectedCategories, text, categoryName]);
@@ -231,7 +282,8 @@ export function StickyNote({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setAddToCategoryTarget({ id, workerId, text, color });
+    // Pass existing date to context menu atom
+    setAddToCategoryTarget({ id, workerId, text, color, dueDate });
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 
@@ -245,32 +297,62 @@ export function StickyNote({
   // Resolve Styles dynamically
   const styles = getNoteStyles(color, column);
 
-  // Use inline styles for dynamic background/border colors 
-  // because Tailwind JIT often fails to detect constructed class names (e.g. "bg-user-1/20")
-  // unless they explicitly exist in the source code or safelist.
+  // Use inline styles for dynamic background/border colors
   const colorIndex = typeof color === "number" ? color : 0;
   const colorVar = `var(--color-user-${colorIndex + 1})`;
 
   let dynamicStyle: React.CSSProperties = {};
 
   if (column === 0) {
-    // Assigned: 
     dynamicStyle = {
       backgroundColor: `color-mix(in srgb, ${colorVar}, transparent 60%)`,
       borderColor: `color-mix(in srgb, ${colorVar}, transparent 30%)`,
     };
   } else if (column === 1) {
-    // In Progress: 
     dynamicStyle = {
       backgroundColor: `color-mix(in srgb, ${colorVar}, transparent 25%)`,
       borderColor: colorVar,
     };
   } else {
-    // Completed: 
     dynamicStyle = {
       backgroundColor: `color-mix(in srgb, ${colorVar}, transparent 90%)`,
       borderColor: `color-mix(in srgb, ${colorVar}, transparent 70%)`,
     };
+  }
+
+  // Calculate Due Date Badge Styles
+  const dateInfo = getDueDateLabel(dueDate);
+
+  let badgeClasses =
+    "absolute top-1 left-1 px-1.5 py-0.5 rounded z-10 pointer-events-none border transition-all ";
+  let badgeStyle: React.CSSProperties = {};
+
+  if (dateInfo) {
+    switch (dateInfo.status) {
+      case "past":
+        badgeClasses +=
+          "bg-red-500 text-red-950 border-red-600 font-bold text-[12px] shadow-lg animate-[pulse_1s_cubic-bezier(0.4,0,0.6,1)_infinite]";
+        break;
+      case "today":
+        badgeClasses +=
+          "bg-orange-400 text-red-800 border-orange-500 font-bold text-[12px] shadow-md animate-[pulse_3s_cubic-bezier(0.4,0,0.6,1)_infinite]";
+        break;
+      case "tomorrow":
+        badgeClasses +=
+          "bg-yellow-100/80 text-yellow-900 border-yellow-200 text-[10px] shadow-sm";
+        break;
+      case "future":
+      default:
+        badgeClasses +=
+          "text-slate-800 backdrop-blur-[2px] text-[10px] shadow-sm";
+        badgeStyle = {
+          backgroundColor: `color-mix(in srgb, ${colorVar}, transparent ${getDueDateBackgroundTranparency(
+            column
+          )})`,
+          borderColor: `color-mix(in srgb, ${colorVar}, transparent 40%)`,
+        };
+        break;
+    }
   }
 
   return (
@@ -298,14 +380,18 @@ export function StickyNote({
         className={`
           ${styles.text}
           p-0 rotate-[-0.5deg] border-l-4 min-h-[90px] aspect-square flex flex-col transition-all group/note relative overflow-hidden
-          ${isDragging || isFilteredOut ? "opacity-30 grayscale-[0.5]" : "opacity-100"}
+          ${
+            isDragging || isFilteredOut
+              ? "opacity-30 grayscale-[0.5]"
+              : "opacity-100"
+          }
           ${
             isEditing
               ? "ring-4 ring-cyan-400 shadow-2xl scale-[1.02] rotate-0 z-20 cursor-text"
               : isLockedByOther
               ? "cursor-not-allowed opacity-80"
               : isFilteredOut
-              ? "shadow-sm" 
+              ? "shadow-sm"
               : `${
                   isHighlighted ? "shadow-xl z-10" : "shadow-sm"
                 } hover:shadow-xl hover:scale-[1.02] cursor-grab`
@@ -313,7 +399,7 @@ export function StickyNote({
         `}
       >
         {isFilteredOut && (
-          <div 
+          <div
             className="absolute inset-0 z-50 pointer-events-none"
             style={{
               backgroundImage: `repeating-linear-gradient(
@@ -322,9 +408,16 @@ export function StickyNote({
                 rgba(0, 0, 0, 0.05) 10px,
                 rgba(0, 0, 0, 0.1) 10px,
                 rgba(0, 0, 0, 0.1) 20px
-              )`
+              )`,
             }}
           />
+        )}
+
+        {/* Due Date Label */}
+        {dateInfo && column !== 2 && (
+          <div className={badgeClasses} style={badgeStyle}>
+            {dateInfo.label}
+          </div>
         )}
 
         {isLockedByOther && (
@@ -345,7 +438,6 @@ export function StickyNote({
           }}
           className="flex-grow overflow-y-auto overflow-x-hidden note-scroll"
         >
-
           <div
             ref={textRef}
             contentEditable={isEditing}

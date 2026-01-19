@@ -139,6 +139,21 @@ export class DatabaseService {
     });
   }
 
+  static async updateNoteDueDate(
+    workerId: string,
+    noteId: string,
+    dueDate: string | null
+  ): Promise<void> {
+    if (dueDate === null) {
+      await remove(ref(db, `boarddata/${workerId}/notes/${noteId}/dueDate`));
+    } else {
+      await set(
+        ref(db, `boarddata/${workerId}/notes/${noteId}/dueDate`),
+        dueDate
+      );
+    }
+  }
+
   static async moveNote(
     noteId: string,
     prevWorkerId: string,

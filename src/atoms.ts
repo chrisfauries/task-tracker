@@ -58,6 +58,9 @@ export const workerToDeleteAtom = atom<{ id: string; name: string } | null>(null
 // Custom Colors Dialog Atom
 export const isCustomColorsDialogOpenAtom = atom(false);
 
+// Due Date Dialog Atom
+export const isDueDateDialogOpenAtom = atom(false);
+
 // Import/Export Dialog Atom
 export const isImportExportDialogOpenAtom = atom(false);
 

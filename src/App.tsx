@@ -19,6 +19,7 @@ import { CategoryManagementDialog } from "./modals/CategoryManagementDialog";
 import { ImportExportDialog } from "./modals/ImportExportDialog";
 import { AddToCategoryDialog } from "./modals/AddToCategoryDialog";
 import { CustomColorsDialog } from "./modals/CustomColorDialog";
+import { DueDateDialog } from "./modals/DueDateDialog";
 import {
   AddWorkerDialog,
   EditWorkerDialog,
@@ -178,6 +179,7 @@ export default function App() {
       />
 
       {/* DIALOGS */}
+      <DueDateDialog />
       <AddToCategoryDialog />
       <SnapshotDialog />
       <AddWorkerDialog />

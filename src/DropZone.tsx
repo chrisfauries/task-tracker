@@ -195,6 +195,7 @@ export function DropZone({
             text={note.text}
             color={note.color}
             column={colIndex}
+            dueDate={note.dueDate}
             categoryName={note.categoryName}
             workerId={workerId}
             position={note.position}
