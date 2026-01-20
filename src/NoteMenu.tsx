@@ -56,7 +56,7 @@ export function NoteMenu({
           }
           await DatabaseService.deleteNote(workerId, id);
         }}
-        className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center opacity-0 group-hover/note:opacity-100 transition-opacity bg-black/5 hover:bg-black/10 rounded-full z-30 text-slate-500 hover:text-red-600 text-xs font-bold transition-all"
+        className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center opacity-0 group-hover/note:opacity-100 transition-opacity bg-black/5 hover:bg-black/10 rounded-full z-30 text-slate-500 dark:text-slate-300 hover:text-red-600 text-xs font-bold transition-all"
       >
         ✕
       </button>
@@ -67,27 +67,77 @@ export function NoteMenu({
           e.stopPropagation();
           setIsPickerOpen(true);
         }}
-        className={`absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center z-30 transition-opacity duration-0
-          ${isPickerOpen 
-            ? "opacity-0 pointer-events-none" 
-            : "opacity-0 group-hover/note:opacity-100 bg-black/5 hover:bg-black/10 pointer-events-auto"
+        className={`absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center z-30 transition-opacity duration-0 dark:text-slate-100
+          ${
+            isPickerOpen
+              ? "opacity-0 pointer-events-none"
+              : "opacity-0 group-hover/note:opacity-100 bg-black/5 hover:bg-black/10 pointer-events-auto"
           }
         `}
       >
-        <svg className="w-3 h-3 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="m5 15 7-7 7 7" />
+        <svg
+          className="w-3 h-3 text-slate-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="m5 15 7-7 7 7"
+          />
         </svg>
       </button>
 
       {/* FULL-WIDTH BOTTOM COLOR PICKER (DRAWER) */}
-      <div className={`
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setIsPickerOpen(true);
+        }}
+        className={`absolute bottom-0 left-0 right-0 h-4 flex items-center justify-center z-30 transition-opacity duration-0
+          ${
+            isPickerOpen
+              ? "opacity-0 pointer-events-none"
+              : "opacity-0 group-hover/note:opacity-100 bg-black/5 hover:bg-black/10 pointer-events-auto"
+          }
+        `}
+      >
+        <svg
+          className="w-3 h-3 text-slate-500"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={3}
+            d="m5 15 7-7 7 7"
+          />
+        </svg>
+      </button>
+
+      {/* FULL-WIDTH BOTTOM COLOR PICKER (DRAWER) */}
+      {/* Updated to support dark mode: 
+         - bg-white/95 -> dark:bg-slate-800/95 
+         - border-white/30 -> dark:border-slate-600/30
+      */}
+      <div
+        className={`
         absolute bottom-0 left-0 right-0
-        bg-white/95 backdrop-blur-md 
-        px-2 py-3 z-40 border-t border-white/30
+        bg-slate-200 dark:bg-slate-800/95 backdrop-blur-md 
+        px-2 py-3 z-40 border-t border-white/30 dark:border-slate-600/30
         transform will-change-transform
         transition-transform duration-300 ease-out
-        ${isPickerOpen ? "translate-y-0" : "translate-y-full pointer-events-none"}
-      `}>
+        ${
+          isPickerOpen
+            ? "translate-y-0"
+            : "translate-y-full pointer-events-none"
+        }
+      `}
+      >
         <div className="flex flex-wrap items-center justify-center gap-1.5">
           {DEFAULT_PALETTE_HEX.map((_, index) => {
             const isSelected = index === currentColor;
@@ -110,10 +160,16 @@ export function NoteMenu({
                   setIsPickerOpen(false);
                 }}
                 className={`
-                  relative w-3.5 h-3.5 rounded-full ${getSolidColorClass(index)} 
-                  border border-black/10 hover:scale-125 
+                  relative w-3.5 h-3.5 rounded-full ${getSolidColorClass(
+                    index
+                  )} 
+                  border border-black/10 dark:border-white/20 hover:scale-125 
                   transition-all shadow-sm flex-shrink-0
-                  ${isSelected ? "ring-2 ring-offset-1 ring-slate-400 scale-110" : ""}
+                  ${
+                    isSelected
+                      ? "ring-2 ring-offset-1 ring-slate-400 dark:ring-slate-500 scale-110"
+                      : ""
+                  }
                 `}
                 title={`Color ${index + 1}`}
               />

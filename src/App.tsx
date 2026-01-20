@@ -30,7 +30,8 @@ import {
   editingWorkerAtom,
   isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
-  customPaletteAtom
+  customPaletteAtom,
+  darkModeAtom
 } from "./atoms";
 
 export default function App() {
@@ -55,6 +56,17 @@ export default function App() {
   const setEditingWorker = useSetAtom(editingWorkerAtom);
   const setIsDeleteWorkerDialogOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
   const setWorkerToDelete = useSetAtom(workerToDeleteAtom);
+
+  // Dark Mode Logic
+  const [darkMode] = useAtom(darkModeAtom);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [darkMode]);
   
   // Custom Palette State
   const [customPalette] = useAtom(customPaletteAtom);
@@ -144,7 +156,7 @@ export default function App() {
 
   return (
     <div
-      className="h-screen flex flex-col bg-slate-50 overflow-hidden relative"
+      className="h-screen flex flex-col bg-slate-50 dark:bg-slate-950 overflow-hidden relative"
       style={{ fontFamily: "Georgia, serif" }}
     >
       <ContextMenu />

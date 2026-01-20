@@ -181,7 +181,7 @@ export function DropZone({
       onDragEnter={() => setIsOver(true)}
       onDragLeave={() => setIsOver(false)}
       onDrop={handleContainerDrop}
-      className={`bg-slate-200/40 border-2 rounded-lg p-1 flex flex-col gap-4 transition-all relative group/zone min-h-[160px] h-full ${
+      className={`bg-slate-200/40 dark:bg-slate-800 border-2 rounded-lg p-1 flex flex-col gap-4 transition-all relative group/zone min-h-[160px] h-full ${
         isOver
           ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
           : "border-dashed border-transparent"

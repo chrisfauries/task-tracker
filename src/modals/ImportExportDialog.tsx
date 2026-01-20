@@ -82,38 +82,38 @@ function ImportExportDialogContent({ boardData }: { boardData: BoardData }) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200 overflow-hidden">
-        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
-          <h2 className="text-xl font-bold text-slate-800">Data Management</h2>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 text-2xl">✕</button>
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200 overflow-hidden border dark:border-slate-700">
+        <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">Data Management</h2>
+          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">✕</button>
         </div>
 
         <div className="p-6 space-y-6">
           {/* EXPORT SECTION */}
-          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl">
-            <h3 className="font-bold text-blue-800 mb-2 flex items-center gap-2"><span className="text-xl">💾</span> Export Backup</h3>
-            <p className="text-sm text-blue-600 mb-4">Download a copy of the entire board state (Notes, Categories, and Rows) to your computer as a JSON file.</p>
+          <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4 rounded-xl">
+            <h3 className="font-bold text-blue-800 dark:text-blue-300 mb-2 flex items-center gap-2"><span className="text-xl">💾</span> Export Backup</h3>
+            <p className="text-sm text-blue-600 dark:text-blue-400 mb-4">Download a copy of the entire board state (Notes, Categories, and Rows) to your computer as a JSON file.</p>
             <button onClick={handleExport} className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition shadow-sm">Download Backup</button>
           </div>
 
-          <div className="w-full h-px bg-slate-200"></div>
+          <div className="w-full h-px bg-slate-200 dark:bg-slate-700"></div>
 
           {/* IMPORT SECTION */}
           {!confirmingImport ? (
-            <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl">
-              <h3 className="font-bold text-amber-800 mb-2 flex items-center gap-2"><span className="text-xl">📂</span> Import Backup</h3>
-              <p className="text-sm text-amber-700 mb-4">
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-800 p-4 rounded-xl">
+              <h3 className="font-bold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2"><span className="text-xl">📂</span> Import Backup</h3>
+              <p className="text-sm text-amber-700 dark:text-amber-400 mb-4">
                 Restore the board from a previously saved JSON file.<br />
                 <span className="font-bold">Warning:</span> This will completely overwrite the current board.
               </p>
               <input type="file" accept=".json" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
-              <button onClick={() => fileInputRef.current?.click()} className="w-full py-2.5 bg-white border border-amber-300 text-amber-800 hover:bg-amber-100 font-medium rounded-lg transition shadow-sm">Select Backup File...</button>
+              <button onClick={() => fileInputRef.current?.click()} className="w-full py-2.5 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-700 text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-medium rounded-lg transition shadow-sm">Select Backup File...</button>
             </div>
           ) : (
-            <div className="bg-red-50 border border-red-200 p-4 rounded-xl text-center">
-              <h3 className="font-bold text-red-800 mb-2 text-lg">⚠️ Are you sure?</h3>
-              <p className="text-sm text-red-600 mb-6">
-                You are about to overwrite the entire board with data from <span className="font-bold font-mono bg-red-100 px-1 rounded">{confirmingImport.name}</span>.<br /><br />
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4 rounded-xl text-center">
+              <h3 className="font-bold text-red-800 dark:text-red-300 mb-2 text-lg">⚠️ Are you sure?</h3>
+              <p className="text-sm text-red-600 dark:text-red-400 mb-6">
+                You are about to overwrite the entire board with data from <span className="font-bold font-mono bg-red-100 dark:bg-red-900/50 px-1 rounded">{confirmingImport.name}</span>.<br /><br />
                 This action <span className="font-bold underline">cannot be undone</span>.
               </p>
               <div className="flex gap-3">
@@ -122,7 +122,7 @@ function ImportExportDialogContent({ boardData }: { boardData: BoardData }) {
                     setConfirmingImport(null);
                     if (fileInputRef.current) fileInputRef.current.value = "";
                   }}
-                  className="flex-1 py-2 bg-white border border-slate-300 text-slate-600 rounded-lg hover:bg-slate-50 font-medium"
+                  className="flex-1 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 font-medium"
                 >
                   Cancel
                 </button>

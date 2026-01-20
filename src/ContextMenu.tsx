@@ -22,7 +22,7 @@ export const ContextMenu = () => {
   return (
     <div
       style={{ top: position.y, left: position.x }}
-      className="fixed bg-white shadow-xl border border-slate-200 rounded-lg py-1 z-[100] min-w-[180px] animate-in fade-in zoom-in-95 duration-100 flex flex-col"
+      className="fixed bg-white dark:bg-slate-800 shadow-xl border border-slate-200 dark:border-slate-700 rounded-lg py-1 z-[100] min-w-[180px] animate-in fade-in zoom-in-95 duration-100 flex flex-col"
       onClick={(e) => {e.nativeEvent.isWithinContextMenu = true;}}
     >
       <button
@@ -31,7 +31,7 @@ export const ContextMenu = () => {
           e.nativeEvent.isWithinContextMenu = true;
           handleOpenDueDate();
         }}
-        className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700"
+        className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
       >
         {target?.dueDate ? "Change Due Date..." : "Set Due Date..."}
       </button>
@@ -42,7 +42,7 @@ export const ContextMenu = () => {
           e.nativeEvent.isWithinContextMenu = true;
           handleOpenAddToCategory();
         }}
-        className="w-full text-left px-4 py-2 hover:bg-slate-100 text-sm font-medium text-slate-700"
+        className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
       >
         Add to category...
       </button>

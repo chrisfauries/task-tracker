@@ -451,6 +451,7 @@ export function StickyNote({
               w-full min-h-full
               flex flex-col justify-center items-center text-center
               px-3 py-3 whitespace-pre-wrap break-words
+              dark:text-slate-300
             `}
           >
             {text}

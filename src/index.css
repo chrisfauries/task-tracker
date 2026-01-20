@@ -16,6 +16,8 @@
   --color-user-7: #EC4899; 
 }
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 body {
   font-family: "Georgia, serif";
 }
@@ -23,6 +25,12 @@ body {
 :root {
   background-color: #f8fafc; /* slate-50 */
   color: #1e293b; /* slate-800 */
+}
+
+:root.dark {
+  background-color: #0f172a; /* slate-900 */
+  color: #f1f5f9; /* slate-100 */
+  color-scheme: dark;
 }
 
 [contenteditable]:focus {

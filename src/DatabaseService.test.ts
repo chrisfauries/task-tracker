@@ -76,6 +76,36 @@ describe("DatabaseService", () => {
     vi.clearAllMocks();
   });
 
+  describe("User Settings (Theme)", () => {
+    it("saveTheme sets dark mode preference", async () => {
+      await DatabaseService.saveTheme("user123", true);
+      expect(ref).toHaveBeenCalledWith(
+        expect.anything(),
+        "users/user123/settings/darkMode"
+      );
+      expect(set).toHaveBeenCalledWith(expect.anything(), true);
+    });
+
+    it("saveTheme sets light mode preference", async () => {
+      await DatabaseService.saveTheme("user123", false);
+      expect(ref).toHaveBeenCalledWith(
+        expect.anything(),
+        "users/user123/settings/darkMode"
+      );
+      expect(set).toHaveBeenCalledWith(expect.anything(), false);
+    });
+
+    it("subscribeToTheme calls onValue with correct path", () => {
+      const cb = vi.fn();
+      DatabaseService.subscribeToTheme("user123", cb);
+      expect(ref).toHaveBeenCalledWith(
+        expect.anything(),
+        "users/user123/settings/darkMode"
+      );
+      expect(onValue).toHaveBeenCalled();
+    });
+  });
+
   describe("Subscriptions", () => {
     it("subscribeToBoardData calls onValue", () => {
       const cb = vi.fn();
@@ -223,13 +253,13 @@ describe("DatabaseService", () => {
       // Default color is 0 (Green), default order is 0
       expect(set).toHaveBeenCalledWith(
         expect.objectContaining({ key: result }),
-        { name, items: [], color: 0, order: 0 } 
+        { name, items: [], color: 0, order: 0 }
       );
 
       // 3. result matches the key format
       expect(result).toMatch(/^mock-key-/);
     });
-    
+
     it("createCategory creates category with color and returns key ", async () => {
       const name = "New Category";
       // Execute
@@ -334,7 +364,7 @@ describe("DatabaseService", () => {
     });
 
     it("restoreBackup overwrites boardData and categories and customPalette", async () => {
-      await DatabaseService.restoreBackup({}, {});
+      await DatabaseService.restoreBackup({}, {}, []);
       expect(set).toHaveBeenCalledTimes(3);
     });
   });

@@ -31,8 +31,8 @@ export function AddWorkerDialog() {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200 border dark:border-slate-700">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
           Add New Worker
         </h2>
         <form onSubmit={handleSubmit}>
@@ -40,7 +40,7 @@ export function AddWorkerDialog() {
             autoFocus
             type="text"
             placeholder="Worker or Student Name"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-6"
+            className="w-full px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-6 bg-white dark:bg-slate-900 dark:text-white"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -58,7 +58,7 @@ export function AddWorkerDialog() {
                     getSolidColorClass(index)
                   } ${
                     color === index
-                      ? "border-slate-800 scale-110"
+                      ? "border-slate-800 dark:border-slate-200 scale-110"
                       : "border-transparent"
                   }`}
                 />
@@ -69,7 +69,7 @@ export function AddWorkerDialog() {
             <button
               type="button"
               onClick={() => setIsOpen(false)}
-              className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+              className="px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
             >
               Cancel
             </button>
@@ -121,8 +121,8 @@ export function EditWorkerDialog() {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200">
-        <h2 className="text-xl font-bold text-slate-800 mb-4">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200 border dark:border-slate-700">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
           Edit Worker Name
         </h2>
         <form onSubmit={handleSubmit}>
@@ -130,7 +130,7 @@ export function EditWorkerDialog() {
             autoFocus
             type="text"
             placeholder="Worker or Student Name"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-6"
+            className="w-full px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-6 bg-white dark:bg-slate-900 dark:text-white"
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
@@ -148,7 +148,7 @@ export function EditWorkerDialog() {
                     getSolidColorClass(index)
                   } ${
                     color === index
-                      ? "border-slate-800 scale-110"
+                      ? "border-slate-800 dark:border-slate-200 scale-110"
                       : "border-transparent"
                   }`}
                 />
@@ -159,7 +159,7 @@ export function EditWorkerDialog() {
             <button
               type="button"
               onClick={handleClose}
-              className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+              className="px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
             >
               Cancel
             </button>
@@ -201,11 +201,11 @@ function DeleteWorkerDialogContent() {
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl p-6 w-full max-w-md border-t-4 border-red-500 animate-in fade-in zoom-in duration-200">
-        <h2 className="text-xl font-bold text-slate-800 mb-2">Delete Row?</h2>
-        <p className="text-slate-600 mb-6">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-md border-t-4 border-red-500 animate-in fade-in zoom-in duration-200 dark:border dark:border-t-4 dark:border-slate-700 dark:border-t-red-500">
+        <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Delete Row?</h2>
+        <p className="text-slate-600 dark:text-slate-300 mb-6">
           Are you sure you want to delete{" "}
-          <span className="font-bold text-slate-900">
+          <span className="font-bold text-slate-900 dark:text-white">
             {workerToDelete?.name}
           </span>
           ?
@@ -213,7 +213,7 @@ function DeleteWorkerDialogContent() {
         <div className="flex justify-end gap-3">
           <button
             onClick={handleClose}
-            className="px-4 py-2 text-slate-500 hover:bg-slate-100 rounded-lg transition"
+            className="px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
           >
             Keep Row
           </button>

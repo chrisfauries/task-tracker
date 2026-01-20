@@ -89,16 +89,16 @@ function CategoryManagementDialogContent({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-[80%] max-w-[80%] max-h-[90vh] flex flex-col overflow-hidden relative animate-in fade-in zoom-in duration-200">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-[80%] max-w-[80%] max-h-[90vh] flex flex-col overflow-hidden relative animate-in fade-in zoom-in duration-200 border dark:border-slate-700">
         
         <SuccessNotification 
           message={successMessage} 
           onClose={() => setSuccessMessage(null)} 
         />
 
-        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
-          <h2 className="text-2xl font-bold text-slate-800">Category Sets</h2>
-          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 text-2xl">
+        <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+          <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Category Sets</h2>
+          <button onClick={handleClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl">
             ✕
           </button>
         </div>
@@ -114,7 +114,7 @@ function CategoryManagementDialogContent({
             onReorder={handleReorder}
           />
 
-          <div className="flex-1 p-8 bg-white overflow-y-auto">
+          <div className="flex-1 p-8 bg-white dark:bg-slate-900 overflow-y-auto">
             {selectedId && categories[selectedId] ? (
               <CategoryEditor
                 category={categories[selectedId]}
@@ -128,7 +128,7 @@ function CategoryManagementDialogContent({
                 }}
               />
             ) : (
-                <div className="h-full flex flex-col items-center justify-center text-slate-300 italic">
+                <div className="h-full flex flex-col items-center justify-center text-slate-300 dark:text-slate-600 italic">
                   Select a category from the left to start editing or pushing notes
                 </div>
             )}
@@ -144,13 +144,13 @@ function CategoryManagementDialogContent({
 function SuccessNotification({ message, onClose }: { message: string | null; onClose: () => void }) {
   if (!message) return null;
   return (
-    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/90 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white border-2 border-emerald-100 p-8 rounded-2xl shadow-xl text-center max-w-sm">
-        <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-800 border-2 border-emerald-100 dark:border-emerald-900/30 p-8 rounded-2xl shadow-xl text-center max-w-sm">
+        <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
           ✓
         </div>
-        <h3 className="text-xl font-bold text-slate-800 mb-2">Success</h3>
-        <p className="text-slate-600 mb-6">{message}</p>
+        <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">Success</h3>
+        <p className="text-slate-600 dark:text-slate-300 mb-6">{message}</p>
         <button
           onClick={onClose}
           className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-emerald-700 transition w-full"
@@ -264,10 +264,6 @@ function CategorySidebar({ categories, selectedId, onSelect, onCreate, onDelete,
 
     if (items.length === 0) return;
 
-    // Correct Logic: Calculate mouse position relative to the LIST content, not the container viewport.
-    // getBoundingClientRect().top changes as we scroll.
-    // e.clientY - listRect.top gives us the Y position *inside* the list coordinate system.
-    // This correctly aligns with item.offsetTop.
     const relativeMouseY = e.clientY - listRef.current.getBoundingClientRect().top;
 
     let closestIndex = items.length;
@@ -314,13 +310,13 @@ function CategorySidebar({ categories, selectedId, onSelect, onCreate, onDelete,
   return (
     <div 
       ref={scrollContainerRef}
-      className="w-1/3 border-r p-6 overflow-y-auto relative"
+      className="w-1/3 border-r dark:border-slate-700 p-6 overflow-y-auto relative bg-slate-50 dark:bg-slate-800"
     >
       <div className="flex gap-2 mb-6">
         <input
           type="text"
           placeholder="Category Name"
-          className="flex-1 px-3 py-2 border rounded-lg text-sm"
+          className="flex-1 px-3 py-2 border dark:border-slate-600 rounded-lg text-sm bg-white dark:bg-slate-900 dark:text-white"
           value={newCatName}
           onChange={(e) => setNewCatName(e.target.value)}
         />
@@ -426,7 +422,7 @@ function CategoryListItem({
     return (
       <div 
         data-category-id={id}
-        className={`p-4 rounded-xl border flex justify-between items-center bg-white border-indigo-200`}
+        className={`p-4 rounded-xl border flex justify-between items-center bg-white dark:bg-slate-700 border-indigo-200 dark:border-indigo-500`}
       >
         <div className="flex gap-2 items-center flex-1">
           <input
@@ -434,11 +430,11 @@ function CategoryListItem({
             value={renameValue}
             onClick={(e) => e.stopPropagation()}
             onChange={(e) => setRenameValue(e.target.value)}
-            className="w-full px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-indigo-400 outline-none"
+            className="w-full px-2 py-1 border dark:border-slate-500 rounded text-sm focus:ring-2 focus:ring-indigo-400 outline-none bg-white dark:bg-slate-900 dark:text-white"
             autoFocus
           />
-          <button onClick={saveRename} className="text-green-600 font-bold hover:bg-green-50 p-1 rounded">✓</button>
-          <button onClick={cancelRename} className="text-slate-400 font-bold hover:bg-slate-100 p-1 rounded">✕</button>
+          <button onClick={saveRename} className="text-green-600 dark:text-green-400 font-bold hover:bg-green-50 dark:hover:bg-green-900/30 p-1 rounded">✓</button>
+          <button onClick={cancelRename} className="text-slate-400 dark:text-slate-500 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 p-1 rounded">✕</button>
         </div>
       </div>
     );
@@ -448,10 +444,10 @@ function CategoryListItem({
     return (
       <div 
         data-category-id={id}
-        className={`p-4 rounded-xl border flex justify-between items-center bg-white border-red-200`}
+        className={`p-4 rounded-xl border flex justify-between items-center bg-white dark:bg-slate-700 border-red-200 dark:border-red-900`}
       >
         <div className="flex items-center justify-between w-full">
-          <span className="text-sm font-bold text-red-600">Delete this?</span>
+          <span className="text-sm font-bold text-red-600 dark:text-red-400">Delete this?</span>
           <div className="flex gap-2">
             <button
               onClick={(e) => {
@@ -459,7 +455,7 @@ function CategoryListItem({
                 onDelete();
                 setIsDeleting(false);
               }}
-              className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded font-bold hover:bg-red-200"
+              className="px-2 py-1 bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 text-xs rounded font-bold hover:bg-red-200 dark:hover:bg-red-900/60"
             >
               Yes
             </button>
@@ -468,7 +464,7 @@ function CategoryListItem({
                 e.stopPropagation();
                 setIsDeleting(false);
               }}
-              className="px-2 py-1 bg-slate-100 text-slate-600 text-xs rounded font-bold hover:bg-slate-200"
+              className="px-2 py-1 bg-slate-100 dark:bg-slate-600 text-slate-600 dark:text-slate-200 text-xs rounded font-bold hover:bg-slate-200 dark:hover:bg-slate-500"
             >
               No
             </button>
@@ -478,7 +474,7 @@ function CategoryListItem({
     );
   }
 
-  const dragStyles = isDragged ? "opacity-25 bg-slate-100 border-dashed border-slate-300" : "";
+  const dragStyles = isDragged ? "opacity-25 bg-slate-100 dark:bg-slate-800 border-dashed border-slate-300 dark:border-slate-600" : "";
 
   return (
     <div
@@ -488,13 +484,15 @@ function CategoryListItem({
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       className={`p-4 rounded-xl cursor-pointer transition border flex justify-between items-center group relative 
-        ${isSelected ? "bg-indigo-50 border-indigo-200" : "hover:bg-slate-50 border-transparent"}
+        ${isSelected 
+            ? "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800" 
+            : "bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border-transparent"}
         ${dragStyles}
       `}
     >
       <div className="flex items-center gap-3">
         <div 
-            className="text-slate-300 group-hover:text-slate-500 cursor-grab active:cursor-grabbing"
+            className="text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 cursor-grab active:cursor-grabbing"
             title="Drag to reorder"
         >
             <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 20 20" fill="currentColor">
@@ -503,17 +501,17 @@ function CategoryListItem({
         </div>
 
         <div className={`w-3 h-3 rounded-full ${getSolidColorClass(color)}`} />
-        <span className="font-bold text-slate-700 select-none">{name}</span>
+        <span className="font-bold text-slate-700 dark:text-slate-200 select-none">{name}</span>
       </div>
       <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button onClick={startRenaming} className="text-slate-400 hover:text-blue-600" title="Rename">✏️</button>
+        <button onClick={startRenaming} className="text-slate-400 hover:text-blue-600 dark:hover:text-blue-400" title="Rename">✏️</button>
         <button
           onClick={(e) => {
             e.stopPropagation();
             setIsDeleting(true);
             setIsEditing(false);
           }}
-          className="text-red-400 hover:text-red-600"
+          className="text-red-400 hover:text-red-600 dark:hover:text-red-400"
           title="Delete"
         >
           🗑️
@@ -545,7 +543,7 @@ function CategoryEditor({ category, boardData, onUpdateItems, onUpdateColor, onA
 function ColorPicker({ currentColor, onPick }: { currentColor?: number; onPick: (c: number) => void }) {
   return (
     <section>
-      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Category Color</h3>
+      <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Category Color</h3>
       <div className="flex gap-2">
         {DEFAULT_PALETTE_HEX.map((_, index) => (
           <button
@@ -553,7 +551,7 @@ function ColorPicker({ currentColor, onPick }: { currentColor?: number; onPick: 
             onClick={() => onPick(index)}
             className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${
               getSolidColorClass(index)
-            } ${currentColor === index ? "border-slate-800 scale-110" : "border-transparent"}`}
+            } ${currentColor === index ? "border-slate-800 dark:border-slate-200 scale-110" : "border-transparent"}`}
           />
         ))}
       </div>
@@ -599,7 +597,7 @@ function ItemsList({ items, onUpdate }: { items: string[]; onUpdate: (items: str
 
   return (
     <section>
-      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Edit Items</h3>
+      <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Edit Items</h3>
       <div className="space-y-2">
         {items.map((item, idx) => (
           <div key={idx} className="flex gap-2">
@@ -607,7 +605,7 @@ function ItemsList({ items, onUpdate }: { items: string[]; onUpdate: (items: str
               ref={(el) => { itemInputRefs.current[idx] = el; }}
               type="text"
               value={item}
-              className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none font-medium text-slate-700"
+              className="flex-1 px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-400 outline-none font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800"
               onKeyDown={(e) => handleKeyDown(e, idx)}
               onChange={(e) => handleChange(idx, e.target.value)}
             />
@@ -618,7 +616,7 @@ function ItemsList({ items, onUpdate }: { items: string[]; onUpdate: (items: str
         ))}
         <button
           onClick={handleAdd}
-          className="w-full py-3 border-2 border-dashed border-slate-200 text-slate-400 rounded-xl hover:bg-slate-50 transition font-bold text-sm"
+          className="w-full py-3 border-2 border-dashed border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition font-bold text-sm"
         >
           + Add Item
         </button>
@@ -629,18 +627,18 @@ function ItemsList({ items, onUpdate }: { items: string[]; onUpdate: (items: str
 
 function PushToBoard({ boardData, onApply }: { boardData: BoardData; onApply: (wId: string, colIdx: number) => void }) {
   return (
-    <section className="pt-8 border-t">
-      <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Push Category to Board</h3>
+    <section className="pt-8 border-t dark:border-slate-700">
+      <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Push Category to Board</h3>
       <div className="grid grid-cols-1 gap-3">
         {Object.entries(boardData).map(([wId, worker]) => (
-          <div key={wId} className="flex items-center justify-between bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <span className="font-bold text-slate-800">{worker.name}</span>
+          <div key={wId} className="flex items-center justify-between bg-slate-50 dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+            <span className="font-bold text-slate-800 dark:text-slate-200">{worker.name}</span>
             <div className="flex gap-2">
               {["Assigned", "Active", "Done"].map((label, idx) => (
                 <button
                   key={label}
                   onClick={() => onApply(wId, idx)}
-                  className="px-4 py-1.5 bg-white border border-slate-300 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition shadow-sm"
+                  className="px-4 py-1.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded-lg text-[10px] font-black uppercase tracking-tighter hover:bg-indigo-600 hover:text-white hover:border-indigo-600 dark:hover:bg-indigo-600 dark:hover:border-indigo-600 dark:text-slate-300 transition shadow-sm"
                 >
                   {label}
                 </button>

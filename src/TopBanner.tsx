@@ -25,15 +25,15 @@ export function TopBanner({
   const setAppSettingsMenuPos = useSetAtom(appSettingsMenuPosAtom);
 
   return (
-    <div className="p-4 border-b z-50 grid grid-cols-3 items-center shadow-sm">
+    <div className="p-4 border-b dark:border-slate-800 z-50 grid grid-cols-3 items-center shadow-sm bg-white dark:bg-slate-900 transition-colors">
       {/* Left: Title + Logo */}
       <div className="flex items-center gap-3">
         <img
           src="/logo.png"
           alt="Because Band Logo"
-          className="h-10 w-auto object-contain"
+          className="h-10 w-auto object-contain dark:invert"
         />
-        <h1 className="text-xl font-bold text-slate-700">Because Band Board</h1>
+        <h1 className="text-xl font-bold text-slate-700 dark:text-slate-200">Because Band Board</h1>
       </div>
 
       {/* Center: Undo/Redo */}
@@ -48,7 +48,7 @@ export function TopBanner({
       <div className="flex gap-3 items-center justify-end">
         <AvatarList
           presence={presence}
-          className="mr-4 border-r pr-4 border-slate-200"
+          className="mr-4 border-r pr-4 border-slate-200 dark:border-slate-700"
         />
 
         <SearchAndFilter />
@@ -58,7 +58,7 @@ export function TopBanner({
             const rect = e.currentTarget.getBoundingClientRect();
             setAppSettingsMenuPos({ x: rect.left, y: rect.bottom + 8 });
           }}
-          className="p-2 rounded-lg text-slate-600 hover:bg-slate-100 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all"
+          className="p-2 rounded-lg text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 hover:shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all"
           title="Menu"
         >
           <svg

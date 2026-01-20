@@ -1,6 +1,47 @@
 import { atom } from "jotai";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { SnapshotsData, CategoriesData, AddToCategoryTarget } from "./types";
+
+// Dark Mode Atom
+const _darkModeStorageAtom = atom(false);
+export const darkModeAtom = atom(
+  (get) => get(_darkModeStorageAtom),
+  (_, set, newMode: boolean) => {
+    // Optimistic Update
+    set(_darkModeStorageAtom, newMode);
+    
+    // Write to Database if logged in
+    const user = auth.currentUser;
+    if (user) {
+      DatabaseService.saveTheme(user.uid, newMode);
+    }
+  }
+);
+
+darkModeAtom.onMount = (setSelf) => {
+  let dbUnsubscribe: (() => void) | undefined;
+  
+  // Listen for Auth changes to subscribe/unsubscribe from user settings
+  const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+    if (user) {
+      // If user logs in, subscribe to their theme
+      dbUnsubscribe = DatabaseService.subscribeToTheme(user.uid, (isDark) => {
+        setSelf(isDark);
+      });
+    } else {
+      // If user logs out, clear DB sub and reset to default
+      if (dbUnsubscribe) dbUnsubscribe();
+      setSelf(false);
+    }
+  });
+
+  return () => {
+    authUnsubscribe();
+    if (dbUnsubscribe) dbUnsubscribe();
+  };
+};
 
 // Snapshot Atoms
 const _snapshotsStorageAtom = atom<SnapshotsData>({});

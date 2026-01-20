@@ -28,7 +28,8 @@ function SnapshotDialogContent() {
     try {
       await DatabaseService.restoreBackup(
         snap.boardData || {},
-        snap.categories || {}
+        snap.categories || {},
+        [] // Assuming empty custom colors for snapshot restore as per previous logic
       );
       alert("Board restored successfully!");
       setConfirmRestoreId(null);
@@ -51,24 +52,24 @@ function SnapshotDialogContent() {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border dark:border-slate-700">
+        <div className="p-6 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <span>⏱️</span> Version History
             </h2>
-            <p className="text-slate-500 text-sm mt-1">
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
               Auto-saved snapshots of the board state.
             </p>
           </div>
           <button
             onClick={handleClose}
-            className="text-slate-400 hover:text-slate-600 text-2xl"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-2xl"
           >
             ✕
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-900/50">
           {loading ? (
             <div className="text-center py-12 text-slate-400 italic">
               Loading snapshots...
@@ -82,14 +83,14 @@ function SnapshotDialogContent() {
               {sortedSnapshots.map(([key, snap]) => (
                 <div
                   key={key}
-                  className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3"
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 shadow-sm hover:shadow-md transition-all flex flex-col gap-3"
                 >
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="font-bold text-slate-800 text-lg">
+                      <h3 className="font-bold text-slate-800 dark:text-slate-200 text-lg">
                         {snap.title}
                       </h3>
-                      <div className="text-xs text-slate-400 mt-1">
+                      <div className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                         {new Date(snap.timestamp).toLocaleString()} • by{" "}
                         {snap.createdBy}
                       </div>
@@ -105,7 +106,7 @@ function SnapshotDialogContent() {
                           </button>
                           <button
                             onClick={() => setConfirmRestoreId(null)}
-                            className="bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300"
+                            className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-600"
                           >
                             Cancel
                           </button>
@@ -116,7 +117,7 @@ function SnapshotDialogContent() {
                             setConfirmDeleteId(null);
                             setConfirmRestoreId(key);
                           }}
-                          className="bg-indigo-50 text-indigo-700 border border-indigo-200 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-indigo-100 transition"
+                          className="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition"
                         >
                           Restore
                         </button>
@@ -131,7 +132,7 @@ function SnapshotDialogContent() {
                           </button>
                           <button
                             onClick={() => setConfirmDeleteId(null)}
-                            className="bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300"
+                            className="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-600"
                           >
                             X
                           </button>

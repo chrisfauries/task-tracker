@@ -29,6 +29,23 @@ import type {
 
 export class DatabaseService {
   // ==========================================
+  // User Settings (Theme)
+  // ==========================================
+
+  static async saveTheme(userId: string, isDark: boolean): Promise<void> {
+    await set(ref(db, `users/${userId}/settings/darkMode`), isDark);
+  }
+
+  static subscribeToTheme(
+    userId: string,
+    callback: (isDark: boolean) => void
+  ): Unsubscribe {
+    return onValue(ref(db, `users/${userId}/settings/darkMode`), (snap) => {
+      callback(!!snap.val());
+    });
+  }
+
+  // ==========================================
   // Data Subscriptions
   // ==========================================
 

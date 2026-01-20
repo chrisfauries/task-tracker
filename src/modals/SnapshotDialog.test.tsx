@@ -121,7 +121,7 @@ describe("SnapshotDialog", () => {
       fireEvent.click(screen.getByText("Yes, Restore"));
 
       await waitFor(() => {
-        expect(DatabaseService.restoreBackup).toHaveBeenCalledWith({}, {});
+        expect(DatabaseService.restoreBackup).toHaveBeenCalledWith({}, {}, []);
         expect(mockAlert).toHaveBeenCalledWith("Board restored successfully!");
         expect(store.get(isSnapshotDialogOpenAtom)).toBe(false);
       });

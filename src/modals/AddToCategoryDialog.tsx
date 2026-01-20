@@ -81,22 +81,22 @@ function AddToCategoryDialogContent() {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200 overflow-hidden flex flex-col max-h-[80vh]">
-        <div className="p-4 border-b flex justify-between items-center bg-slate-50">
-          <h2 className="text-lg font-bold text-slate-800">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md animate-in fade-in zoom-in duration-200 overflow-hidden flex flex-col max-h-[80vh] border dark:border-slate-700">
+        <div className="p-4 border-b dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-800">
+          <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
             Add to Category...
           </h2>
           <button
             onClick={() => setIsOpen(false)}
-            className="text-slate-400 hover:text-slate-600 text-xl"
+            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl"
           >
             ✕
           </button>
         </div>
 
         {/* Create New Category Section */}
-        <div className="p-4 bg-slate-50 border-b">
-          <label className="block text-xs font-bold text-slate-400 uppercase mb-2">
+        <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-700">
+          <label className="block text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-2">
             Create New
           </label>
           <div className="flex gap-2">
@@ -111,7 +111,7 @@ function AddToCategoryDialogContent() {
                   handleCreate();
                 }
               }}
-              className="flex-1 px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              className="flex-1 px-3 py-2 border dark:border-slate-600 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-900 dark:text-white"
               disabled={isCreating}
             />
             <button
@@ -133,7 +133,7 @@ function AddToCategoryDialogContent() {
                   getSolidColorClass(index)
                 } ${
                   selectedColor === index
-                    ? "border-slate-800 scale-110"
+                    ? "border-slate-800 dark:border-slate-200 scale-110"
                     : "border-transparent"
                 }`}
                 title={`Color ${index + 1}`}
@@ -142,9 +142,9 @@ function AddToCategoryDialogContent() {
           </div>
         </div>
 
-        <div className="p-4 overflow-y-auto flex-1">
+        <div className="p-4 overflow-y-auto flex-1 dark:bg-slate-900">
           {Object.keys(categories).length === 0 ? (
-            <p className="text-slate-500 text-center italic mt-2">
+            <p className="text-slate-500 dark:text-slate-400 text-center italic mt-2">
               No categories available.
             </p>
           ) : (
@@ -154,14 +154,14 @@ function AddToCategoryDialogContent() {
                   key={id}
                   onClick={() => handleSelect(id)}
                   disabled={!!pendingCatId}
-                  className="flex items-center gap-3 w-full p-3 rounded-lg border hover:bg-slate-50 transition text-left disabled:opacity-50"
+                  className="flex items-center gap-3 w-full p-3 rounded-lg border dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition text-left disabled:opacity-50"
                 >
                   <div
                     className={`w-4 h-4 rounded-full ${
                       getSolidColorClass(cat.color)
                     }`}
                   />
-                  <span className="font-medium text-slate-700">{cat.name}</span>
+                  <span className="font-medium text-slate-700 dark:text-slate-200">{cat.name}</span>
                 </button>
               ))}
             </div>
