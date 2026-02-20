@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { ref, set, push, remove, onValue, get } from "firebase/database";
 import { db } from "./firebase";
 import { BELL_SOUND_URL } from "./constants";
@@ -35,6 +35,13 @@ export function DropZone({
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // If drag operation ends everywhere, ensure we are not highlighted
+    if (dragOrigin === null && isOver) {
+      setIsOver(false);
+    }
+  }, [dragOrigin, isOver]);
 
   const isDraggingFromHere =
     dragOrigin?.workerId === workerId && dragOrigin?.colIndex === colIndex;

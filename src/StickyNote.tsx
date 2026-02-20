@@ -115,6 +115,9 @@ export function StickyNote({
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const initialTextRef = useRef<string>(text);
 
   const lock = locks[id];
@@ -279,6 +282,44 @@ export function StickyNote({
     releaseLock();
   };
 
+  const stopAutoScroll = () => {
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+  };
+
+  const handleNoteMouseEnter = () => {
+    stopAutoScroll();
+
+    scrollTimeoutRef.current = setTimeout(() => {
+      scrollIntervalRef.current = setInterval(() => {
+        if (scrollContainerRef.current) {
+          const { scrollTop, scrollHeight, clientHeight } =
+            scrollContainerRef.current;
+          // Stop if we're at the bottom
+          if (scrollTop >= scrollHeight - clientHeight) {
+            stopAutoScroll();
+          } else {
+            // Scroll down by 1 pixel
+            scrollContainerRef.current.scrollTop += 1;
+          }
+        }
+      }, 35); // Adjust for scroll speed (lower is faster)
+    }, 500); // 1-second delay
+  };
+
+  const handleNoteMouseLeave = () => {
+    stopAutoScroll();
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -344,7 +385,7 @@ export function StickyNote({
       case "future":
       default:
         badgeClasses +=
-          "text-slate-800 backdrop-blur-[2px] text-[10px] shadow-sm";
+          "text-slate-800 backdrop-blur-[2px] text-[10px] shadow-sm dark:text-slate-300";
         badgeStyle = {
           backgroundColor: `color-mix(in srgb, ${colorVar}, transparent ${getDueDateBackgroundTranparency(
             column
@@ -376,6 +417,8 @@ export function StickyNote({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
         onContextMenu={handleContextMenu}
+        onMouseEnter={handleNoteMouseEnter}
+        onMouseLeave={handleNoteMouseLeave}
         style={dynamicStyle}
         className={`
           ${styles.text}
@@ -430,6 +473,7 @@ export function StickyNote({
         )}
 
         <div
+          ref={scrollContainerRef}
           style={{
             maskImage:
               "linear-gradient(to bottom, black 80%, transparent 100%)",
@@ -460,7 +504,7 @@ export function StickyNote({
 
         {categoryName && (
           <div
-            className={`absolute bottom-2 right-2 text-[10px] italic opacity-60 pointer-events-none select-none max-w-[80%] truncate ${styles.text}`}
+            className={`absolute bottom-2 right-2 text-[10px] italic opacity-60 dark:opacity-80 pointer-events-none select-none max-w-[80%] truncate ${styles.text} dark:text-slate-300`}
           >
             {categoryName}
           </div>
