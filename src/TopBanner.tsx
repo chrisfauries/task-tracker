@@ -1,5 +1,5 @@
 import type { User } from "firebase/auth";
-import type { HistoryAction, AllPresenceData } from "./types";
+import type { HistoryAction } from "./types";
 import { UndoRedoControls } from "./UndoRedoControls";
 import { AvatarList } from "./AvatarList";
 import { SearchAndFilter } from "./SearchAndFilter";
@@ -10,7 +10,6 @@ interface TopBannerProps {
   user: User | null;
   history: HistoryAction[];
   future: HistoryAction[];
-  presence: AllPresenceData;
   onUndo: () => void;
   onRedo: () => void;
 }
@@ -18,7 +17,6 @@ interface TopBannerProps {
 export function TopBanner({
   history,
   future,
-  presence,
   onUndo,
   onRedo,
 }: TopBannerProps) {
@@ -47,7 +45,6 @@ export function TopBanner({
       {/* Right: Buttons */}
       <div className="flex gap-3 items-center justify-end">
         <AvatarList
-          presence={presence}
           className="mr-4 border-r pr-4 border-slate-200 dark:border-slate-700"
         />
 

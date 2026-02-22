@@ -24,6 +24,9 @@ vi.mock("./DatabaseService", () => ({
     renewLock: vi.fn().mockResolvedValue(true),
     updateNoteText: vi.fn().mockResolvedValue(true),
     subscribeToCustomPalette: vi.fn(() => () => {}),
+    subscribeToLocks: vi.fn(() => () => {}),
+    subscribeToBoardData: vi.fn(() => () => {}),
+    subscribeToPresence: vi.fn(() => () => {}),
   },
 }));
 

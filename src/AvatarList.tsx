@@ -1,11 +1,12 @@
-import type { AllPresenceData } from "./types";
+import { useAtomValue } from "jotai";
+import { presenceAtom } from "./atoms";
 
 interface AvatarListProps {
-  presence: AllPresenceData;
   className?: string;
 }
 
-export function AvatarList({ presence, className = "" }: AvatarListProps) {
+export function AvatarList({ className = "" }: AvatarListProps) {
+  const presence = useAtomValue(presenceAtom);
   const onlineUsers = Object.values(presence).filter((p) => p.online);
 
   return (

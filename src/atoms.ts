@@ -2,7 +2,7 @@ import { atom } from "jotai";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
-import type { SnapshotsData, CategoriesData, AddToCategoryTarget } from "./types";
+import type { SnapshotsData, CategoriesData, AddToCategoryTarget, BoardData, LocksData, AllPresenceData } from "./types";
 
 // Dark Mode Atom
 const _darkModeStorageAtom = atom(false);
@@ -66,6 +66,20 @@ snapshotsAtom.onMount = (setSelf) => {
   return () => unsubscribe();
 };
 
+// Board Data Atoms
+const _boardDataStorageAtom = atom<BoardData>({});
+export const boardDataAtom = atom(
+  (get) => get(_boardDataStorageAtom),
+  (_, set, newData: BoardData) => set(_boardDataStorageAtom, newData)
+);
+
+boardDataAtom.onMount = (setSelf) => {
+  const unsubscribe = DatabaseService.subscribeToBoardData((data) => {
+    setSelf(data);
+  });
+  return () => unsubscribe();
+};
+
 // Category Atoms
 const _categoriesStorageAtom = atom<CategoriesData>({});
 export const isCategoryManagementDialogOpenAtom = atom(false);
@@ -78,6 +92,34 @@ export const categoriesAtom = atom(
 
 categoriesAtom.onMount = (setSelf) => {
   const unsubscribe = DatabaseService.subscribeToCategories((data) => {
+    setSelf(data);
+  });
+  return () => unsubscribe();
+};
+
+// Locks Atom
+const _locksStorageAtom = atom<LocksData>({});
+export const locksAtom = atom(
+  (get) => get(_locksStorageAtom),
+  (_, set, newData: LocksData) => set(_locksStorageAtom, newData)
+);
+
+locksAtom.onMount = (setSelf) => {
+  const unsubscribe = DatabaseService.subscribeToLocks((data) => {
+    setSelf(data);
+  });
+  return () => unsubscribe();
+};
+
+// Presence Atom
+const _presenceStorageAtom = atom<AllPresenceData>({});
+export const presenceAtom = atom(
+  (get) => get(_presenceStorageAtom),
+  (_, set, newData: AllPresenceData) => set(_presenceStorageAtom, newData)
+);
+
+presenceAtom.onMount = (setSelf) => {
+  const unsubscribe = DatabaseService.subscribeToPresence((data) => {
     setSelf(data);
   });
   return () => unsubscribe();

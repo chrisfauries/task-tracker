@@ -1,7 +1,7 @@
 import { DropZone } from "./DropZone";
 import { WorkerNameTag } from "./WorkerNameTag";
 import type { User } from "firebase/auth";
-import type { WorkerData, LocksData, HistoryAction, DragOrigin } from "./types";
+import type { WorkerData, HistoryAction, DragOrigin } from "./types";
 import { COLUMN_NAMES } from "./constants";
 
 interface WorkerRowProps {
@@ -10,7 +10,6 @@ interface WorkerRowProps {
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
   onDragEnd: () => void;
-  locks: LocksData;
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
@@ -24,7 +23,6 @@ export function WorkerRow({
   dragOrigin,
   onDragStart,
   onDragEnd,
-  locks,
   currentUser,
   onActivity,
   onHistory,
@@ -52,7 +50,6 @@ export function WorkerRow({
             dragOrigin={dragOrigin}
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
-            locks={locks}
             currentUser={currentUser}
             onActivity={onActivity}
             onHistory={onHistory}

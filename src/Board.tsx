@@ -1,20 +1,18 @@
 import React, { useRef, useCallback } from "react";
+import { useAtomValue } from "jotai";
 import { WorkerRow } from "./WorkerRow";
 import type { User } from "firebase/auth";
 import type {
-  BoardData,
-  LocksData,
   HistoryAction,
   DragOrigin,
 } from "./types";
 import { COLUMN_NAMES } from "./constants";
+import { boardDataAtom } from "./atoms";
 
 interface BoardProps {
-  boardData: BoardData;
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
   onDragEnd: () => void;
-  locks: LocksData;
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
@@ -23,11 +21,9 @@ interface BoardProps {
 }
 
 export function Board({
-  boardData,
   dragOrigin,
   onDragStart,
   onDragEnd,
-  locks,
   currentUser,
   onActivity,
   onHistory,
@@ -37,6 +33,7 @@ export function Board({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollSpeed = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
+  const boardData = useAtomValue(boardDataAtom);
 
   const performAutoScroll = useCallback(() => {
     if (scrollContainerRef.current && (autoScrollSpeed.current.x !== 0 || autoScrollSpeed.current.y !== 0)) {
@@ -153,7 +150,6 @@ export function Board({
             dragOrigin={dragOrigin}
             onDragStart={onDragStart}
             onDragEnd={handleDragEndWrapped}
-            locks={locks}
             currentUser={currentUser}
             onActivity={onActivity}
             onHistory={onHistory}

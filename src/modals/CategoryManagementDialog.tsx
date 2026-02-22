@@ -2,31 +2,29 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useAtomValue, useSetAtom } from "jotai";
 import { DatabaseService } from "../DatabaseService";
 import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
-import { isCategoryManagementDialogOpenAtom, categoriesAtom } from "../atoms";
+import { isCategoryManagementDialogOpenAtom, categoriesAtom, boardDataAtom } from "../atoms";
 import type { CategoriesData, BoardData } from "../types";
 
 interface CategoryDialogProps {
-  boardData: BoardData;
   onApply: (catId: string, workerId: string, colIndex: number) => void;
 }
 
 export function CategoryManagementDialog({
-  boardData,
   onApply,
 }: CategoryDialogProps) {
   const isOpen = useAtomValue(isCategoryManagementDialogOpenAtom);
   
   if (!isOpen) return null;
 
-  return <CategoryManagementDialogContent boardData={boardData} onApply={onApply} />;
+  return <CategoryManagementDialogContent onApply={onApply} />;
 }
 
 function CategoryManagementDialogContent({
-  boardData,
   onApply,
 }: CategoryDialogProps) {
   const setIsOpen = useSetAtom(isCategoryManagementDialogOpenAtom);
   const categories = useAtomValue(categoriesAtom);
+  const boardData = useAtomValue(boardDataAtom);
   
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

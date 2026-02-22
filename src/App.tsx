@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { useAtom, useSetAtom } from "jotai";
+import { useAtom, useSetAtom, useAtomValue } from "jotai";
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin } from "./types";
 import { usePresence } from "./hooks/usePresence";
-import { useBoardData } from "./hooks/useBoardData";
 import { useSnapshots } from "./hooks/useSnapshots";
 import { useHistory } from "./hooks/useHistory";
 import { TopBanner } from "./TopBanner";
@@ -31,7 +30,9 @@ import {
   isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
   customPaletteAtom,
-  darkModeAtom
+  darkModeAtom,
+  boardDataAtom,
+  categoriesAtom
 } from "./atoms";
 
 export default function App() {
@@ -39,7 +40,8 @@ export default function App() {
 
   // Custom Hooks
   usePresence(user);
-  const { boardData, categories, locks, presence } = useBoardData(user);
+  const boardData = useAtomValue(boardDataAtom);
+  const categories = useAtomValue(categoriesAtom);
   const { saveSnapshot, trackActivity } = useSnapshots(
     user,
     boardData,
@@ -169,17 +171,14 @@ export default function App() {
         user={user}
         history={history}
         future={future}
-        presence={presence}
         onUndo={handleUndo}
         onRedo={handleRedo}
       />
 
       <Board
-        boardData={boardData}
         dragOrigin={dragOrigin}
         onDragStart={setDragOrigin}
         onDragEnd={() => setDragOrigin(null)}
-        locks={locks}
         currentUser={user}
         onActivity={trackActivity}
         onHistory={registerHistory}
@@ -198,11 +197,10 @@ export default function App() {
       <EditWorkerDialog />
       <DeleteWorkerDialog />
       <CategoryManagementDialog
-        boardData={boardData}
         onApply={handleApplyCategory}
       />
       <CustomColorsDialog />
-      <ImportExportDialog boardData={boardData} />
+      <ImportExportDialog />
     </div>
   );
 }

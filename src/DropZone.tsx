@@ -4,7 +4,7 @@ import { db } from "./firebase";
 import { BELL_SOUND_URL } from "./constants";
 import { StickyNote } from "./StickyNote";
 import type { User } from "firebase/auth";
-import type { Note, LocksData, HistoryAction, DragOrigin } from "./types";
+import type { Note, HistoryAction, DragOrigin } from "./types";
 
 interface DropZoneProps {
   workerId: string;
@@ -14,7 +14,6 @@ interface DropZoneProps {
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
   onDragEnd: () => void;
-  locks: LocksData;
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
@@ -28,7 +27,6 @@ export function DropZone({
   dragOrigin,
   onDragStart,
   onDragEnd,
-  locks,
   currentUser,
   onActivity,
   onHistory,
@@ -217,7 +215,6 @@ export function DropZone({
             onDragEnd={onDragEnd}
             isNew={id === autoEditId}
             onEditStarted={() => setAutoEditId(null)}
-            locks={locks}
             currentUser={currentUser}
             onActivity={onActivity}
             onHistory={onHistory}

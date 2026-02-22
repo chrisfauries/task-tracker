@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { DatabaseService } from "./DatabaseService";
 import { getNoteStyles } from "./constants";
 import type { User } from "firebase/auth";
-import type { LocksData, HistoryAction } from "./types";
+import type { HistoryAction } from "./types";
 import { NoteMenu } from "./NoteMenu";
 import { useSetAtom, useAtomValue } from "jotai";
 import {
@@ -10,6 +10,7 @@ import {
   contextMenuPosAtom,
   searchQueryAtom,
   selectedCategoriesAtom,
+  locksAtom,
 } from "./atoms";
 
 interface StickyNoteProps {
@@ -34,7 +35,6 @@ interface StickyNoteProps {
   onDragEnd: () => void;
   isNew?: boolean;
   onEditStarted?: () => void;
-  locks: LocksData;
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
@@ -97,13 +97,13 @@ export function StickyNote({
   onDragEnd,
   isNew,
   onEditStarted,
-  locks,
   currentUser,
   onActivity,
   onHistory,
 }: StickyNoteProps) {
   const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
   const setContextMenuPos = useSetAtom(contextMenuPosAtom);
+  const locks = useAtomValue(locksAtom);
 
   // Search & Filter State
   const searchQuery = useAtomValue(searchQueryAtom);
@@ -372,7 +372,7 @@ export function StickyNote({
         }
         DatabaseService.deleteNote(workerId, id);
       });
-    }, 200); // Corresponds to animation duration
+    }, 180); // Corresponds to animation duration
   };
 
   // Calculate Due Date Badge Styles

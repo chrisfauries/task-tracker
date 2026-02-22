@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { Provider, createStore } from "jotai";
 import { CategoryManagementDialog } from "./CategoryManagementDialog";
 import { DatabaseService } from "../DatabaseService";
-import { isCategoryManagementDialogOpenAtom, categoriesAtom } from "../atoms";
+import { isCategoryManagementDialogOpenAtom, categoriesAtom, boardDataAtom } from "../atoms";
 import type { CategoriesData, BoardData } from "../types";
 
 // --- Mocks ---
@@ -15,6 +15,11 @@ vi.mock("../DatabaseService", () => ({
     deleteCategory: vi.fn(),
     updateCategory: vi.fn(),
     subscribeToCategories: vi.fn(() => () => {}),
+    subscribeToBoardData: vi.fn(() => () => {}),
+    subscribeToLocks: vi.fn(() => () => {}),
+    subscribeToPresence: vi.fn(() => () => {}),
+    subscribeToSnapshots: vi.fn(() => () => {}),
+    subscribeToCustomPalette: vi.fn(() => () => {}),
   },
 }));
 
@@ -53,6 +58,7 @@ describe("CategoryManagementDialog", () => {
     // Default state: Open with data
     store.set(isCategoryManagementDialogOpenAtom, true);
     store.set(categoriesAtom, mockCategories);
+    store.set(boardDataAtom, mockBoardData);
   });
 
   afterEach(() => {
@@ -63,7 +69,6 @@ describe("CategoryManagementDialog", () => {
     return render(
       <Provider store={store}>
         <CategoryManagementDialog
-          boardData={mockBoardData}
           onApply={onApplyMock}
         />
       </Provider>

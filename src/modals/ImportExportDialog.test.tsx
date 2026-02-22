@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { ImportExportDialog } from "./ImportExportDialog";
 import { DatabaseService } from "../DatabaseService";
-import { isImportExportDialogOpenAtom, categoriesAtom } from "../atoms";
+import { isImportExportDialogOpenAtom, categoriesAtom, boardDataAtom } from "../atoms";
 import type { BoardData, CategoriesData } from "../types";
 
 // Mock DatabaseService
@@ -13,6 +13,7 @@ vi.mock("../DatabaseService", () => ({
     subscribeToCategories: vi.fn(() => () => {}),
     subscribeToSnapshots: vi.fn(() => () => {}),
     subscribeToCustomPalette: vi.fn(() => () => {}),
+    subscribeToBoardData: vi.fn(() => () => {}),
   },
 }));
 
@@ -40,6 +41,7 @@ describe("ImportExportDialog", () => {
     store = createStore();
     store.set(isImportExportDialogOpenAtom, true);
     store.set(categoriesAtom, mockCategories);
+    store.set(boardDataAtom, mockBoardData);
     
     // Initialize spies here so they are fresh for each test
     mockAlert = vi.spyOn(window, "alert").mockImplementation(() => {});
@@ -56,7 +58,7 @@ describe("ImportExportDialog", () => {
   const renderDialog = () => {
     return render(
       <Provider store={store}>
-        <ImportExportDialog boardData={mockBoardData} />
+        <ImportExportDialog />
       </Provider>
     );
   };
