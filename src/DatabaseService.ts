@@ -226,6 +226,14 @@ export class DatabaseService {
     await remove(ref(db, `boarddata/${workerId}`));
   }
 
+  static async updateWorkerPositions(updates: Record<string, number>): Promise<void> {
+    const updatesObj: Record<string, any> = {};
+    for (const [id, pos] of Object.entries(updates)) {
+      updatesObj[`boarddata/${id}/position`] = pos;
+    }
+    await update(ref(db), updatesObj);
+  }
+
   // ==========================================
   // Category Operations
   // ==========================================

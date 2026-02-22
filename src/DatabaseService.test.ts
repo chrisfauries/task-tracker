@@ -237,6 +237,17 @@ describe("DatabaseService", () => {
       await DatabaseService.deleteWorker("w1");
       expect(remove).toHaveBeenCalled();
     });
+
+    it("updateWorkerPositions updates multiple worker positions", async () => {
+      await DatabaseService.updateWorkerPositions({
+        w1: 0,
+        w2: 1000,
+      });
+      expect(update).toHaveBeenCalledWith(expect.anything(), {
+        "boarddata/w1/position": 0,
+        "boarddata/w2/position": 1000,
+      });
+    });
   });
 
   describe("Category Operations", () => {

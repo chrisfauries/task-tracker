@@ -147,7 +147,7 @@ describe("WorkerModals", () => {
       renderDialog();
 
       const input = screen.getByPlaceholderText(
-        "Worker or Student Name"
+        "Name"
       ) as HTMLInputElement;
       expect(input.value).toBe("Old Name");
 

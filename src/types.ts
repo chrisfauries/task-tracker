@@ -17,6 +17,7 @@ export interface WorkerData {
   name: string;
   notes?: Record<string, Note>;
   defaultColor?: number; 
+  position?: number;
 }
 
 export interface Category {

@@ -85,7 +85,16 @@ boardDataAtom.onMount = (setSelf) => {
 // Worker Ids
 export const workerIdsAtom = selectAtom(
   boardDataAtom,
-  (board) => Object.keys(board || {}),
+  (board) => {
+    return Object.keys(board || {}).sort((a, b) => {
+      const posA = board[a].position ?? Number.MAX_SAFE_INTEGER;
+      const posB = board[b].position ?? Number.MAX_SAFE_INTEGER;
+      if (posA === posB) {
+        return (board[a].name || "").localeCompare(board[b].name || "");
+      }
+      return posA - posB;
+    });
+  },
   (prev, next) => prev.length === next.length && prev.every((val, i) => val === next[i])
 );
 
@@ -185,6 +194,8 @@ export const editingWorkerAtom = atom<{ id: string; name: string; color: number 
 
 export const isDeleteWorkerDialogOpenAtom = atom(false);
 export const workerToDeleteAtom = atom<{ id: string; name: string } | null>(null);
+
+export const isWorkerOrderDialogOpenAtom = atom(false);
 
 // Custom Colors Dialog Atom
 export const isCustomColorsDialogOpenAtom = atom(false);
