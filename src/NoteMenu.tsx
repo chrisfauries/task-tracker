@@ -8,6 +8,7 @@ interface NoteMenuProps {
   workerId: string;
   color?: number;
   isLockedByOther: boolean;
+  onDelete: () => void;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
   acquireLock: () => Promise<boolean>;
@@ -19,6 +20,7 @@ export function NoteMenu({
   workerId,
   color,
   isLockedByOther,
+  onDelete,
   onActivity,
   onHistory,
   acquireLock,
@@ -47,14 +49,9 @@ export function NoteMenu({
     <div ref={menuRef}>
       {/* TOP RIGHT CLOSE BUTTON */}
       <button
-        onClick={async (e) => {
+        onClick={(e) => {
           e.stopPropagation();
-          onActivity();
-          const noteData = await DatabaseService.getNote(workerId, id);
-          if (noteData) {
-            onHistory({ type: "DELETE", noteId: id, workerId, noteData });
-          }
-          await DatabaseService.deleteNote(workerId, id);
+          onDelete();
         }}
         className="absolute top-1 right-1 w-6 h-6 flex items-center justify-center opacity-0 group-hover/note:opacity-100 transition-opacity bg-black/5 hover:bg-black/10 rounded-full z-30 text-slate-500 dark:text-slate-300 hover:text-red-600 text-xs font-bold transition-all"
       >

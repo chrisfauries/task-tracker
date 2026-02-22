@@ -114,6 +114,7 @@ export function StickyNote({
   );
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleted, setIsDeleted] = useState(false);
   const textRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -361,6 +362,19 @@ export function StickyNote({
     };
   }
 
+  const handleDelete = () => {
+    setIsDeleted(true);
+    setTimeout(() => {
+      onActivity();
+      DatabaseService.getNote(workerId, id).then((noteData) => {
+        if (noteData) {
+          onHistory({ type: "DELETE", noteId: id, workerId, noteData });
+        }
+        DatabaseService.deleteNote(workerId, id);
+      });
+    }, 200); // Corresponds to animation duration
+  };
+
   // Calculate Due Date Badge Styles
   const dateInfo = getDueDateLabel(dueDate);
 
@@ -439,6 +453,8 @@ export function StickyNote({
                   isHighlighted ? "shadow-xl z-10" : "shadow-sm"
                 } hover:shadow-xl hover:scale-[1.02] cursor-grab`
           }
+          ${isNew ? "animate-expand" : ""}
+          ${isDeleted ? "animate-shrink" : ""}
         `}
       >
         {isFilteredOut && (
@@ -515,6 +531,7 @@ export function StickyNote({
           workerId={workerId}
           color={color}
           isLockedByOther={!!isLockedByOther}
+          onDelete={handleDelete}
           onActivity={onActivity}
           onHistory={onHistory}
           acquireLock={acquireLock}

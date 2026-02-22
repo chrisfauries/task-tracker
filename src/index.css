@@ -51,3 +51,29 @@ body {
 .note-scroll:hover::-webkit-scrollbar-thumb {
   background: rgba(156, 163, 175, 0.5);
 }
+
+@keyframes expand {
+  from {
+    transform: scale(0);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+@keyframes shrink {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(0);
+  }
+}
+
+.animate-expand {
+  animation: expand 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.animate-shrink {
+  animation: shrink 0.2s cubic-bezier(0.55, 0.085, 0.68, 0.53);
+}
