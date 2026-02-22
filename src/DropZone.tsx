@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
+import { useAtomValue } from "jotai";
 import { ref, set, push, remove, onValue, get } from "firebase/database";
 import { db } from "./firebase";
 import { BELL_SOUND_URL } from "./constants";
 import { StickyNote } from "./StickyNote";
 import type { User } from "firebase/auth";
 import type { Note, HistoryAction, DragOrigin } from "./types";
+import { columnNotesListFamily } from "./atoms";
 
 interface DropZoneProps {
   workerId: string;
   colIndex: number;
-  notes: Record<string, Note>;
   defaultColor?: number;
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
@@ -22,7 +23,6 @@ interface DropZoneProps {
 export function DropZone({
   workerId,
   colIndex,
-  notes,
   defaultColor,
   dragOrigin,
   onDragStart,
@@ -34,6 +34,9 @@ export function DropZone({
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
 
+  // Subscribe only to the IDs & Positions array
+  const sortedNoteItems = useAtomValue(columnNotesListFamily(`${workerId}::${colIndex}`));
+
   useEffect(() => {
     // If drag operation ends everywhere, ensure we are not highlighted
     if (dragOrigin === null && isOver) {
@@ -43,15 +46,6 @@ export function DropZone({
 
   const isDraggingFromHere =
     dragOrigin?.workerId === workerId && dragOrigin?.colIndex === colIndex;
-
-  const sortedNotes = Object.entries(notes)
-    .filter(
-      ([_, n]) =>
-        n.column === colIndex &&
-        typeof n.position === "number" &&
-        !isNaN(n.position)
-    )
-    .sort((a, b) => a[1].position - b[1].position);
 
   const handleMove = (
     noteId: string,
@@ -141,8 +135,8 @@ export function DropZone({
       const { noteId, oldWorkerId, oldColumn, oldPosition } =
         JSON.parse(rawData);
       const lastPos =
-        sortedNotes.length > 0
-          ? sortedNotes[sortedNotes.length - 1][1].position
+        sortedNoteItems.length > 0
+          ? sortedNoteItems[sortedNoteItems.length - 1].position
           : 0;
       handleMove(noteId, oldWorkerId, lastPos + 1000, oldColumn, oldPosition);
       remove(ref(db, `locks/${noteId}`));
@@ -154,8 +148,8 @@ export function DropZone({
   const addNote = () => {
     onActivity();
     const lastPos =
-      sortedNotes.length > 0
-        ? sortedNotes[sortedNotes.length - 1][1].position
+      sortedNoteItems.length > 0
+        ? sortedNoteItems[sortedNoteItems.length - 1].position
         : 0;
     const newNoteRef = push(ref(db, `boarddata/${workerId}/notes`));
     const newNote: Note = {
@@ -193,27 +187,21 @@ export function DropZone({
       }`}
     >
       <div className="grid grid-cols-[repeat(auto-fill,minmax(min(140px,max(90px,calc(20%-1rem))),1fr))] auto-rows-min gap-2 flex-grow">
-        {sortedNotes.map(([id, note], index) => (
+        {sortedNoteItems.map((noteItem, index) => (
           <StickyNote
-            key={id}
-            id={id}
-            text={note.text}
-            color={note.color}
-            column={colIndex}
-            dueDate={note.dueDate}
-            categoryName={note.categoryName}
+            key={noteItem.id}
+            id={noteItem.id}
             workerId={workerId}
-            position={note.position}
-            prevPos={index > 0 ? sortedNotes[index - 1][1].position : null}
+            prevPos={index > 0 ? sortedNoteItems[index - 1].position : null}
             nextPos={
-              index < sortedNotes.length - 1
-                ? sortedNotes[index + 1][1].position
+              index < sortedNoteItems.length - 1
+                ? sortedNoteItems[index + 1].position
                 : null
             }
             onReorder={handleMove}
             onDragStart={() => onDragStart({ workerId, colIndex })}
             onDragEnd={onDragEnd}
-            isNew={id === autoEditId}
+            isNew={noteItem.id === autoEditId}
             onEditStarted={() => setAutoEditId(null)}
             currentUser={currentUser}
             onActivity={onActivity}

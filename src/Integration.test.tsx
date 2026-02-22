@@ -10,9 +10,10 @@ import {
   isAddToCategoryDialogOpenAtom, 
   categoriesAtom, 
   searchQueryAtom, 
-  selectedCategoriesAtom 
+  selectedCategoriesAtom,
+  boardDataAtom
 } from "./atoms";
-import type { CategoriesData } from "./types";
+import type { CategoriesData, BoardData } from "./types";
 
 // Mock DatabaseService to avoid side effects or connection errors in integration tests
 vi.mock("./DatabaseService", () => ({
@@ -114,9 +115,33 @@ describe("Integration: Search, Filter & StickyNote", () => {
     cat2: { name: "Project B", items: [] },
   };
 
+  const mockBoardData: BoardData = {
+    "worker-1": {
+      name: "Worker 1",
+      defaultColor: 0,
+      notes: {
+        "note-1": {
+          text: "Fix critical bug in login",
+          categoryName: "Project A",
+          column: 0,
+          position: 100,
+          color: 0,
+        },
+        "note-2": {
+          text: "Update documentation",
+          categoryName: "Project B",
+          column: 0,
+          position: 200,
+          color: 0,
+        },
+      },
+    },
+  };
+
   beforeEach(() => {
     store = createStore();
     store.set(categoriesAtom, mockCategories);
+    store.set(boardDataAtom, mockBoardData);
     store.set(searchQueryAtom, "");
     store.set(selectedCategoriesAtom, []);
   });
@@ -125,16 +150,12 @@ describe("Integration: Search, Filter & StickyNote", () => {
   const renderIntegration = () => {
     // We need props for StickyNote, but most can be dummy no-ops for this visual test
     const dummyProps = {
-      id: "note-1",
       workerId: "worker-1",
-      column: 0,
-      position: 100,
       prevPos: 0,
       nextPos: 200,
       onReorder: vi.fn(),
       onDragStart: vi.fn(),
       onDragEnd: vi.fn(),
-      locks: {},
       currentUser: { uid: "user-1" } as any,
       onActivity: vi.fn(),
       onHistory: vi.fn(),
@@ -147,14 +168,11 @@ describe("Integration: Search, Filter & StickyNote", () => {
           <div data-testid="board">
             <StickyNote 
               {...dummyProps} 
-              text="Fix critical bug in login" 
-              categoryName="Project A" 
+              id="note-1"
             />
             <StickyNote 
               {...dummyProps} 
               id="note-2"
-              text="Update documentation" 
-              categoryName="Project B" 
             />
           </div>
         </div>

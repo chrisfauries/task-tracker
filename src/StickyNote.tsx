@@ -11,17 +11,12 @@ import {
   searchQueryAtom,
   selectedCategoriesAtom,
   locksAtom,
+  noteFamily,
 } from "./atoms";
 
 interface StickyNoteProps {
   id: string;
-  text: string;
   workerId: string;
-  color?: number;
-  column: number;
-  position: number;
-  categoryName?: string;
-  dueDate?: string;
   prevPos: number | null;
   nextPos: number | null;
   onReorder: (
@@ -83,13 +78,7 @@ function getDueDateBackgroundTranparency(column: number) {
 
 export function StickyNote({
   id,
-  text,
-  color,
-  column,
-  categoryName,
-  dueDate,
   workerId,
-  position,
   prevPos,
   nextPos,
   onReorder,
@@ -101,25 +90,28 @@ export function StickyNote({
   onActivity,
   onHistory,
 }: StickyNoteProps) {
+  const note = useAtomValue(noteFamily(`${workerId}::${id}`));
+  
   const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
   const setContextMenuPos = useSetAtom(contextMenuPosAtom);
   const locks = useAtomValue(locksAtom);
 
-  // Search & Filter State
   const searchQuery = useAtomValue(searchQueryAtom);
   const selectedCategories = useAtomValue(selectedCategoriesAtom);
 
-  const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(
-    null
-  );
+  const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleted, setIsDeleted] = useState(false);
+  
   const textRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const initialTextRef = useRef<string>(text);
+  const initialTextRef = useRef<string>(note?.text || "");
+
+  if (!note) return null;
+  const { text, color, column, categoryName, dueDate, position } = note;
 
   const lock = locks[id];
   const now = Date.now();
@@ -127,7 +119,6 @@ export function StickyNote({
   const isLockedByOther = isLockValid && lock.userId !== currentUser?.uid;
   const lockedByName = isLockedByOther ? lock.userName : null;
 
-  // Calculate if filtered out
   const isFilteredOut = useMemo(() => {
     if (!searchQuery && selectedCategories.length === 0) return false;
 
@@ -140,7 +131,6 @@ export function StickyNote({
     return !(matchesSearch && matchesCategory);
   }, [searchQuery, selectedCategories, text, categoryName]);
 
-  // Determine if this note should be highlighted (Matches filter/search and isn't currently being dragged)
   const hasActiveFilter = !!searchQuery || selectedCategories.length > 0;
   const isHighlighted = hasActiveFilter && !isFilteredOut && !isDragging;
 
@@ -182,7 +172,7 @@ export function StickyNote({
         initialTextRef.current = text;
       });
     }
-  }, [isNew, isEditing, onEditStarted, isLockedByOther]);
+  }, [isNew, isEditing, onEditStarted, isLockedByOther, text]);
 
   useEffect(() => {
     if (isEditing && textRef.current) {
@@ -302,16 +292,14 @@ export function StickyNote({
         if (scrollContainerRef.current) {
           const { scrollTop, scrollHeight, clientHeight } =
             scrollContainerRef.current;
-          // Stop if we're at the bottom
           if (scrollTop >= scrollHeight - clientHeight) {
             stopAutoScroll();
           } else {
-            // Scroll down by 1 pixel
             scrollContainerRef.current.scrollTop += 1;
           }
         }
-      }, 35); // Adjust for scroll speed (lower is faster)
-    }, 500); // 1-second delay
+      }, 35);
+    }, 500); 
   };
 
   const handleNoteMouseLeave = () => {
@@ -324,7 +312,6 @@ export function StickyNote({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // Pass existing date to context menu atom
     setAddToCategoryTarget({ id, workerId, text, color, dueDate });
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
@@ -336,15 +323,11 @@ export function StickyNote({
     }
   };
 
-  // Resolve Styles dynamically
   const styles = getNoteStyles(color, column);
-
-  // Use inline styles for dynamic background/border colors
   const colorIndex = typeof color === "number" ? color : 0;
   const colorVar = `var(--color-user-${colorIndex + 1})`;
 
   let dynamicStyle: React.CSSProperties = {};
-
   if (column === 0) {
     dynamicStyle = {
       backgroundColor: `color-mix(in srgb, ${colorVar}, transparent 60%)`,
@@ -372,10 +355,9 @@ export function StickyNote({
         }
         DatabaseService.deleteNote(workerId, id);
       });
-    }, 180); // Corresponds to animation duration
+    }, 180);
   };
 
-  // Calculate Due Date Badge Styles
   const dateInfo = getDueDateLabel(dueDate);
 
   let badgeClasses =

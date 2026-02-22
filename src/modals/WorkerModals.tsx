@@ -123,13 +123,13 @@ export function EditWorkerDialog() {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 backdrop-blur-sm">
       <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl p-6 w-full max-w-md animate-in fade-in zoom-in duration-200 border dark:border-slate-700">
         <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-          Edit Worker Name
+          Edit Worker
         </h2>
         <form onSubmit={handleSubmit}>
           <input
             autoFocus
             type="text"
-            placeholder="Worker or Student Name"
+            placeholder="Name"
             className="w-full px-4 py-2 border dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none mb-6 bg-white dark:bg-slate-900 dark:text-white"
             value={name}
             onChange={(e) => setName(e.target.value)}

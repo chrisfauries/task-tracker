@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
-import { useAtom, useSetAtom, useAtomValue } from "jotai";
+import { useAtom, useAtomValue } from "jotai";
 import { auth, provider } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
 import type { DragOrigin } from "./types";
@@ -25,10 +25,6 @@ import {
   DeleteWorkerDialog,
 } from "./modals/WorkerModals";
 import {
-  isEditWorkerDialogOpenAtom,
-  editingWorkerAtom,
-  isDeleteWorkerDialogOpenAtom,
-  workerToDeleteAtom,
   customPaletteAtom,
   darkModeAtom,
   boardDataAtom,
@@ -52,12 +48,6 @@ export default function App() {
 
   // Local UI State
   const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
-
-  // Modal States
-  const setIsEditWorkerDialogOpen = useSetAtom(isEditWorkerDialogOpenAtom);
-  const setEditingWorker = useSetAtom(editingWorkerAtom);
-  const setIsDeleteWorkerDialogOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
-  const setWorkerToDelete = useSetAtom(workerToDeleteAtom);
 
   // Dark Mode Logic
   const [darkMode] = useAtom(darkModeAtom);
@@ -112,13 +102,6 @@ export default function App() {
       );
     }
     signOut(auth);
-  };
-
-  const handleEditWorkerStart = (id: string, currentName: string) => {
-    // Default to 0 (Green) if missing
-    const currentColor = boardData[id]?.defaultColor !== undefined ? boardData[id]?.defaultColor : 0;
-    setEditingWorker({ id, name: currentName, color: currentColor });
-    setIsEditWorkerDialogOpen(true);
   };
 
   const handleApplyCategory = async (
@@ -182,11 +165,6 @@ export default function App() {
         currentUser={user}
         onActivity={trackActivity}
         onHistory={registerHistory}
-        onEditWorker={handleEditWorkerStart}
-        onDeleteWorker={(id, name) => {
-          setWorkerToDelete({ id, name });
-          setIsDeleteWorkerDialogOpen(true);
-        }}
       />
 
       {/* DIALOGS */}

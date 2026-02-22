@@ -1,4 +1,6 @@
 import { atom } from "jotai";
+import {  selectAtom } from "jotai/utils";
+import { atomFamily} from "jotai-family"
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
@@ -79,6 +81,52 @@ boardDataAtom.onMount = (setSelf) => {
   });
   return () => unsubscribe();
 };
+
+// Worker Ids
+export const workerIdsAtom = selectAtom(
+  boardDataAtom,
+  (board) => Object.keys(board || {}),
+  (prev, next) => prev.length === next.length && prev.every((val, i) => val === next[i])
+);
+
+export const workerFamily = atomFamily((workerId: string) =>
+  atom((get) => get(boardDataAtom)[workerId])
+);
+
+// worker notes list family (positioning)
+export const columnNotesListFamily = atomFamily((workerColKey: string) => {
+  const [workerId, colIndexStr] = workerColKey.split("::");
+  const colIndex = parseInt(colIndexStr, 10);
+
+  return selectAtom(
+    workerFamily(workerId),
+    (worker) => {
+      if (!worker || !worker.notes) return [];
+      
+      return Object.entries(worker.notes)
+        .filter(([_, n]) => n.column === colIndex && typeof n.position === "number" && !isNaN(n.position))
+        .map(([id, n]) => ({ id, position: n.position }))
+        .sort((a, b) => a.position - b.position);
+    },
+    // Custom deep equality for the array of objects so we only trigger updates if order or IDs change
+    (prev, next) => {
+      if (prev.length !== next.length) return false;
+      for (let i = 0; i < prev.length; i++) {
+        if (prev[i].id !== next[i].id || prev[i].position !== next[i].position) return false;
+      }
+      return true;
+    }
+  );
+});
+
+// Worker Note
+export const noteFamily = atomFamily((workerNoteKey: string) => {
+  const [workerId, noteId] = workerNoteKey.split("::");
+  return atom((get) => {
+    const worker = get(workerFamily(workerId));
+    return worker?.notes?.[noteId] || null;
+  });
+});
 
 // Category Atoms
 const _categoriesStorageAtom = atom<CategoriesData>({});

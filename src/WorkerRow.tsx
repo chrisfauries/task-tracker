@@ -1,42 +1,40 @@
+import { useAtomValue } from "jotai";
+import { workerFamily } from "./atoms";
 import { DropZone } from "./DropZone";
 import { WorkerNameTag } from "./WorkerNameTag";
 import type { User } from "firebase/auth";
-import type { WorkerData, HistoryAction, DragOrigin } from "./types";
+import type { HistoryAction, DragOrigin } from "./types";
 import { COLUMN_NAMES } from "./constants";
 
 interface WorkerRowProps {
   workerId: string;
-  worker: WorkerData;
   dragOrigin: DragOrigin | null;
   onDragStart: (origin: DragOrigin) => void;
   onDragEnd: () => void;
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
-  onEditWorker: (id: string, name: string) => void;
-  onDeleteWorker: (id: string, name: string) => void;
 }
 
 export function WorkerRow({
   workerId,
-  worker,
   dragOrigin,
   onDragStart,
   onDragEnd,
   currentUser,
   onActivity,
   onHistory,
-  onEditWorker,
-  onDeleteWorker,
 }: WorkerRowProps) {
+  const worker = useAtomValue(workerFamily(workerId));
+
+  if (!worker) return null;
+
   return (
     <div className="flex mb-1.5 min-h-[100px]">
-      {/* Name Tag Component */}
       <WorkerNameTag
         workerId={workerId}
         workerName={worker.name}
-        onEdit={onEditWorker}
-        onDelete={onDeleteWorker}
+        defaultColor={worker.defaultColor}
       />
 
       {/* Columns */}
@@ -45,7 +43,6 @@ export function WorkerRow({
           <DropZone
             workerId={workerId}
             colIndex={colIndex}
-            notes={worker.notes || {}}
             defaultColor={worker.defaultColor}
             dragOrigin={dragOrigin}
             onDragStart={onDragStart}

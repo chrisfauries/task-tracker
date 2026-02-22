@@ -7,7 +7,7 @@ import type {
   DragOrigin,
 } from "./types";
 import { COLUMN_NAMES } from "./constants";
-import { boardDataAtom } from "./atoms";
+import { workerIdsAtom } from "./atoms";
 
 interface BoardProps {
   dragOrigin: DragOrigin | null;
@@ -16,8 +16,6 @@ interface BoardProps {
   currentUser: User | null;
   onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
-  onEditWorker: (id: string, name: string) => void;
-  onDeleteWorker: (id: string, name: string) => void;
 }
 
 export function Board({
@@ -27,13 +25,12 @@ export function Board({
   currentUser,
   onActivity,
   onHistory,
-  onEditWorker,
-  onDeleteWorker,
 }: BoardProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollSpeed = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
-  const boardData = useAtomValue(boardDataAtom);
+  
+  const workerIds = useAtomValue(workerIdsAtom);
 
   const performAutoScroll = useCallback(() => {
     if (scrollContainerRef.current && (autoScrollSpeed.current.x !== 0 || autoScrollSpeed.current.y !== 0)) {
@@ -46,7 +43,6 @@ export function Board({
   }, []);
 
   const handleDragOverCapture = (e: React.DragEvent) => {
-    // Only scroll if we are actively dragging a note and have the container ref
     if (!dragOrigin || !scrollContainerRef.current) return;
 
     const container = scrollContainerRef.current;
@@ -60,27 +56,21 @@ export function Board({
     let nextX = 0;
     let nextY = 0;
 
-    // Horizontal Scrolling (Left/Right)
     if (mouseX < left + zoneSize) {
-      // Left Zone
       const distance = Math.max(0, mouseX - left);
       const intensity = 1 - distance / zoneSize;
       nextX = -Math.max(2, (intensity * intensity) * maxSpeed);
     } else if (mouseX > right - zoneSize) {
-      // Right Zone
       const distance = Math.max(0, right - mouseX);
       const intensity = 1 - distance / zoneSize;
       nextX = Math.max(2, (intensity * intensity) * maxSpeed);
     }
 
-    // Vertical Scrolling (Top/Bottom)
     if (mouseY < top + zoneSize) {
-      // Top Zone
       const distance = Math.max(0, mouseY - top);
       const intensity = 1 - distance / zoneSize;
       nextY = -Math.max(2, (intensity * intensity) * maxSpeed);
     } else if (mouseY > bottom - zoneSize) {
-      // Bottom Zone
       const distance = Math.max(0, bottom - mouseY);
       const intensity = 1 - distance / zoneSize;
       nextY = Math.max(2, (intensity * intensity) * maxSpeed);
@@ -91,7 +81,6 @@ export function Board({
     if ((nextX !== 0 || nextY !== 0) && !animationFrameId.current) {
       performAutoScroll();
     } else if (nextX === 0 && nextY === 0 && animationFrameId.current) {
-        // Stop if both are zero
         cancelAnimationFrame(animationFrameId.current);
         animationFrameId.current = null;
     }
@@ -106,7 +95,6 @@ export function Board({
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
-    // Stop scrolling if we leave the board container entirely
     if (
       scrollContainerRef.current &&
       !scrollContainerRef.current.contains(e.relatedTarget as Node)
@@ -142,19 +130,16 @@ export function Board({
         </div>
 
         {/* Worker Rows */}
-        {Object.entries(boardData).map(([workerId, worker]) => (
+        {workerIds.map((workerId) => (
           <WorkerRow
             key={workerId}
             workerId={workerId}
-            worker={worker}
             dragOrigin={dragOrigin}
             onDragStart={onDragStart}
             onDragEnd={handleDragEndWrapped}
             currentUser={currentUser}
             onActivity={onActivity}
             onHistory={onHistory}
-            onEditWorker={onEditWorker}
-            onDeleteWorker={onDeleteWorker}
           />
         ))}
       </div>
