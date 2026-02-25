@@ -1,30 +1,23 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import { DatabaseService } from "../DatabaseService";
-import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
-import { isCategoryManagementDialogOpenAtom, categoriesAtom, boardDataAtom } from "../atoms";
+import { STYLE_MAP, getSolidColorClass } from "../constants";
+import { isCategoryManagementDialogOpenAtom, categoriesAtom, boardDataAtom, applyCategoryAtom } from "../atoms";
 import type { CategoriesData, BoardData } from "../types";
 
-interface CategoryDialogProps {
-  onApply: (catId: string, workerId: string, colIndex: number) => void;
-}
-
-export function CategoryManagementDialog({
-  onApply,
-}: CategoryDialogProps) {
+export function CategoryManagementDialog() {
   const isOpen = useAtomValue(isCategoryManagementDialogOpenAtom);
   
   if (!isOpen) return null;
 
-  return <CategoryManagementDialogContent onApply={onApply} />;
+  return <CategoryManagementDialogContent />;
 }
 
-function CategoryManagementDialogContent({
-  onApply,
-}: CategoryDialogProps) {
+function CategoryManagementDialogContent() {
   const setIsOpen = useSetAtom(isCategoryManagementDialogOpenAtom);
   const categories = useAtomValue(categoriesAtom);
   const boardData = useAtomValue(boardDataAtom);
+  const applyCategory = useSetAtom(applyCategoryAtom);
   
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -120,8 +113,8 @@ function CategoryManagementDialogContent({
                 boardData={boardData}
                 onUpdateItems={(newItems) => updateItems(selectedId, newItems)}
                 onUpdateColor={(newColor) => updateColor(selectedId, newColor)}
-                onApply={(workerId, colIndex) => {
-                   onApply(selectedId, workerId, colIndex);
+                onApply={async (workerId, colIndex) => {
+                   await applyCategory({ catId: selectedId, workerId, colIndex });
                    setSuccessMessage(`Successfully added items to ${boardData[workerId]?.name || 'Worker'}`);
                 }}
               />
@@ -543,7 +536,7 @@ function ColorPicker({ currentColor, onPick }: { currentColor?: number; onPick: 
     <section>
       <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Category Color</h3>
       <div className="flex gap-2">
-        {DEFAULT_PALETTE_HEX.map((_, index) => (
+        {STYLE_MAP.map((_, index) => (
           <button
             key={index}
             onClick={() => onPick(index)}

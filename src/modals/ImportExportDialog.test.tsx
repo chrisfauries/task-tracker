@@ -17,6 +17,12 @@ vi.mock("../DatabaseService", () => ({
   },
 }));
 
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(() => () => {}),
+  GoogleAuthProvider: vi.fn(),
+}));
+
 describe("ImportExportDialog", () => {
   let store: ReturnType<typeof createStore>;
   
@@ -36,6 +42,16 @@ describe("ImportExportDialog", () => {
   const DEFAULT_PALETTE = [
     "#10B981", "#3B82F6", "#EAB308", "#EF4444", "#F97316", "#A855F7", "#EC4899"
   ];
+
+  // Stub FileReader to be reliable in JSDOM
+  vi.stubGlobal('FileReader', class {
+    onload: any;
+    readAsText(blob: Blob) {
+      blob.text().then(text => {
+        if (this.onload) this.onload({ target: { result: text } });
+      });
+    }
+  });
 
   beforeEach(() => {
     store = createStore();
@@ -149,7 +165,12 @@ describe("ImportExportDialog", () => {
   describe("Import Functionality", () => {
     const createMockFile = (content: object | string, name = "backup.json") => {
         const str = typeof content === "string" ? content : JSON.stringify(content);
-        return new File([str], name, { type: "application/json" });
+        const file = new File([str], name, { type: "application/json" });
+        // Polyfill text() method if missing in test environment
+        if (!file.text) {
+            file.text = async () => str;
+        }
+        return file;
     };
 
     it("shows confirmation screen upon selecting a file", async () => {

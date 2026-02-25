@@ -24,6 +24,12 @@ vi.mock("../DatabaseService", () => ({
   },
 }));
 
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(() => () => {}),
+  GoogleAuthProvider: vi.fn(),
+}));
+
 describe("WorkerModals", () => {
   let store: ReturnType<typeof createStore>;
 

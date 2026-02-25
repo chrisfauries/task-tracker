@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { DatabaseService } from "./DatabaseService";
-import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "./constants";
+import { STYLE_MAP, getSolidColorClass } from "./constants";
 import type { HistoryAction } from "./types";
 
 interface NoteMenuProps {
@@ -136,7 +136,7 @@ export function NoteMenu({
       `}
       >
         <div className="flex flex-wrap items-center justify-center gap-1.5">
-          {DEFAULT_PALETTE_HEX.map((_, index) => {
+          {STYLE_MAP.map((_, index) => {
             const isSelected = index === currentColor;
             return (
               <button

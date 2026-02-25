@@ -1,86 +1,199 @@
 import { atom } from "jotai";
-import {  selectAtom } from "jotai/utils";
-import { atomFamily} from "jotai-family"
-import { onAuthStateChanged } from "firebase/auth";
+import { atomEffect, withAtomEffect } from "jotai-effect";
+import { selectAtom } from "jotai/utils";
+import { atomFamily } from "jotai-family";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import type { User } from "firebase/auth";
 import { auth } from "./firebase";
 import { DatabaseService } from "./DatabaseService";
-import type { SnapshotsData, CategoriesData, AddToCategoryTarget, BoardData, LocksData, AllPresenceData } from "./types";
+import type {
+  SnapshotsData,
+  CategoriesData,
+  AddToCategoryTarget,
+  BoardData,
+  LocksData,
+  AllPresenceData,
+  DragOrigin,
+} from "./types";
+
+// User Atom
+const _userStorageAtom = atom<User | null>(null);
+_userStorageAtom.onMount = (setSelf) => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    setSelf(user);
+  });
+  return () => unsubscribe();
+};
+
+export const userAtom = atom((get) => get(_userStorageAtom));
+
+// Logout Atom
+export const logoutAtom = atom(null, async (get, set) => {
+  const user = get(userAtom);
+  if (user) {
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const dateStr = new Date().toLocaleDateString();
+    await set(
+      snapshotsAtom,
+      `${user.displayName} logged out @ ${timeStr} on ${dateStr}`,
+    );
+  }
+  await signOut(auth);
+});
 
 // Dark Mode Atom
 const _darkModeStorageAtom = atom(false);
+export const darkModeDomEffect = atomEffect((get) => {
+  if (get(_darkModeStorageAtom)) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+});
+export const darkModeSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (user) {
+    const unsubscribe = DatabaseService.subscribeToTheme(user.uid, (isDark) => {
+      set(_darkModeStorageAtom, isDark);
+    });
+    return () => unsubscribe();
+  } else {
+    set(_darkModeStorageAtom, false);
+  }
+});
 export const darkModeAtom = atom(
   (get) => get(_darkModeStorageAtom),
-  (_, set, newMode: boolean) => {
+  (get, set, newMode: boolean) => {
     // Optimistic Update
     set(_darkModeStorageAtom, newMode);
-    
+
     // Write to Database if logged in
-    const user = auth.currentUser;
+    const user = get(userAtom);
     if (user) {
       DatabaseService.saveTheme(user.uid, newMode);
     }
-  }
+  },
 );
 
-darkModeAtom.onMount = (setSelf) => {
-  let dbUnsubscribe: (() => void) | undefined;
-  
-  // Listen for Auth changes to subscribe/unsubscribe from user settings
-  const authUnsubscribe = onAuthStateChanged(auth, (user) => {
-    if (user) {
-      // If user logs in, subscribe to their theme
-      dbUnsubscribe = DatabaseService.subscribeToTheme(user.uid, (isDark) => {
-        setSelf(isDark);
-      });
-    } else {
-      // If user logs out, clear DB sub and reset to default
-      if (dbUnsubscribe) dbUnsubscribe();
-      setSelf(false);
-    }
-  });
-
-  return () => {
-    authUnsubscribe();
-    if (dbUnsubscribe) dbUnsubscribe();
-  };
-};
-
-// Snapshot Atoms
-const _snapshotsStorageAtom = atom<SnapshotsData>({});
+/**
+ * Snapshot Atoms
+ */
 export const isSnapshotDialogOpenAtom = atom(false);
-export const snapshotsLoadingAtom = atom(true);
-export const snapshotsAtom = atom(
-  (get) =>
-    Object.entries(get(_snapshotsStorageAtom)).sort(
-      (a, b) => b[1].timestamp - a[1].timestamp
-    ),
-  (_, set, newData: SnapshotsData) => {
-    set(_snapshotsStorageAtom, newData);
-    set(snapshotsLoadingAtom, false);
-  }
+export const snapshotsLoadingAtom = atom(
+  (get) => get(_snapshotsStorageAtom) === null,
 );
 
-snapshotsAtom.onMount = (setSelf) => {
+export const _snapshotsStorageAtom = atom<SnapshotsData | null>(null);
+export const snapshotsSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(_snapshotsStorageAtom, null);
+    return;
+  }
   const unsubscribe = DatabaseService.subscribeToSnapshots((data) => {
-    setSelf(data);
+    set(_snapshotsStorageAtom, data);
   });
-
   return () => unsubscribe();
-};
+});
+
+export const snapshotsAtom = atom(
+  (get) => {
+    const data = get(_snapshotsStorageAtom);
+    if (!data) return [];
+    return Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
+  },
+  async (get, _, reason: string) => {
+    const user = get(userAtom);
+    if (!user) return;
+    const boardData = get(boardDataAtom);
+    const categories = get(categoriesAtom);
+    await DatabaseService.saveSnapshot(user, reason, boardData, categories);
+  },
+);
+
+// Login Snapshot Logic
+const _hasLoggedLoginSnapshotAtom = atom(false);
+
+export const snapshotsLoginSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  const hasLogged = get(_hasLoggedLoginSnapshotAtom);
+
+  if (!user) {
+    if (hasLogged) {
+      set(_hasLoggedLoginSnapshotAtom, false);
+    }
+    return;
+  }
+
+  const boardData = get(boardDataAtom);
+  const categories = get(categoriesAtom);
+
+  if (
+    !hasLogged &&
+    Object.keys(boardData).length > 0 &&
+    Object.keys(categories).length > 0
+  ) {
+    const timeStr = new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    const dateStr = new Date().toLocaleDateString();
+    set(
+      snapshotsAtom,
+      `${user.displayName} logged in @ ${timeStr} on ${dateStr}`,
+    );
+    set(_hasLoggedLoginSnapshotAtom, true);
+  }
+});
+
+// Activity Tracking Atom
+const _activityTimeoutAtom = atom<ReturnType<typeof setTimeout> | null>(null);
+
+export const trackActivityAtom = atom(null, (get, set) => {
+  const currentTimeout = get(_activityTimeoutAtom);
+  if (currentTimeout) {
+    clearTimeout(currentTimeout);
+  }
+
+  const newTimeout = setTimeout(() => {
+    const user = auth.currentUser;
+    if (user) {
+      const timeStr = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      const dateStr = new Date().toLocaleDateString();
+      set(
+        snapshotsAtom,
+        `${user.displayName} made changes @ ${timeStr} on ${dateStr}`,
+      );
+    }
+  }, 60000 * 5); // 5 minutes
+
+  set(_activityTimeoutAtom, newTimeout);
+});
 
 // Board Data Atoms
 const _boardDataStorageAtom = atom<BoardData>({});
 export const boardDataAtom = atom(
   (get) => get(_boardDataStorageAtom),
-  (_, set, newData: BoardData) => set(_boardDataStorageAtom, newData)
+  (_, set, newData: BoardData) => set(_boardDataStorageAtom, newData),
 );
 
-boardDataAtom.onMount = (setSelf) => {
+export const boardDataSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(_boardDataStorageAtom, {});
+    return;
+  }
   const unsubscribe = DatabaseService.subscribeToBoardData((data) => {
-    setSelf(data);
+    set(_boardDataStorageAtom, data);
   });
   return () => unsubscribe();
-};
+});
 
 // Worker Ids
 export const workerIdsAtom = selectAtom(
@@ -95,11 +208,12 @@ export const workerIdsAtom = selectAtom(
       return posA - posB;
     });
   },
-  (prev, next) => prev.length === next.length && prev.every((val, i) => val === next[i])
+  (prev, next) =>
+    prev.length === next.length && prev.every((val, i) => val === next[i]),
 );
 
 export const workerFamily = atomFamily((workerId: string) =>
-  atom((get) => get(boardDataAtom)[workerId])
+  atom((get) => get(boardDataAtom)[workerId]),
 );
 
 // worker notes list family (positioning)
@@ -111,9 +225,14 @@ export const columnNotesListFamily = atomFamily((workerColKey: string) => {
     workerFamily(workerId),
     (worker) => {
       if (!worker || !worker.notes) return [];
-      
+
       return Object.entries(worker.notes)
-        .filter(([_, n]) => n.column === colIndex && typeof n.position === "number" && !isNaN(n.position))
+        .filter(
+          ([_, n]) =>
+            n.column === colIndex &&
+            typeof n.position === "number" &&
+            !isNaN(n.position),
+        )
         .map(([id, n]) => ({ id, position: n.position }))
         .sort((a, b) => a.position - b.position);
     },
@@ -121,10 +240,11 @@ export const columnNotesListFamily = atomFamily((workerColKey: string) => {
     (prev, next) => {
       if (prev.length !== next.length) return false;
       for (let i = 0; i < prev.length; i++) {
-        if (prev[i].id !== next[i].id || prev[i].position !== next[i].position) return false;
+        if (prev[i].id !== next[i].id || prev[i].position !== next[i].position)
+          return false;
       }
       return true;
-    }
+    },
   );
 });
 
@@ -144,56 +264,114 @@ export const isAddToCategoryDialogOpenAtom = atom(false);
 export const addToCategoryTargetAtom = atom<AddToCategoryTarget | null>(null);
 export const categoriesAtom = atom(
   (get) => get(_categoriesStorageAtom),
-  (_, set, newData: CategoriesData) => set(_categoriesStorageAtom, newData)
+  (_, set, newData: CategoriesData) => set(_categoriesStorageAtom, newData),
 );
 
-categoriesAtom.onMount = (setSelf) => {
+export const categoriesSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(_categoriesStorageAtom, {});
+    return;
+  }
   const unsubscribe = DatabaseService.subscribeToCategories((data) => {
-    setSelf(data);
+    set(_categoriesStorageAtom, data);
   });
   return () => unsubscribe();
-};
+});
+
+export const applyCategoryAtom = atom(
+  null,
+  async (get, set, { catId, workerId, colIndex }: { catId: string; workerId: string; colIndex: number }) => {
+    const categories = get(categoriesAtom);
+    const boardData = get(boardDataAtom);
+    
+    const category = categories[catId];
+    if (!category || !category.items) return;
+
+    set(trackActivityAtom);
+
+    const workerNotes = boardData[workerId]?.notes || {};
+    const validPositions = Object.values(workerNotes)
+      .filter(
+        (n) =>
+          n.column === colIndex &&
+          typeof n.position === "number" &&
+          !isNaN(n.position),
+      )
+      .map((n) => n.position);
+    const lastPos = validPositions.length > 0 ? Math.max(...validPositions) : 0;
+
+    for (const [index, text] of category.items.entries()) {
+      await DatabaseService.createNote(workerId, {
+        text,
+        column: colIndex,
+        color: category.color !== undefined ? category.color : 0,
+        position: lastPos + 1000 + index * 10,
+        categoryName: category.name,
+      });
+    }
+  }
+);
 
 // Locks Atom
 const _locksStorageAtom = atom<LocksData>({});
 export const locksAtom = atom(
   (get) => get(_locksStorageAtom),
-  (_, set, newData: LocksData) => set(_locksStorageAtom, newData)
+  (_, set, newData: LocksData) => set(_locksStorageAtom, newData),
 );
 
-locksAtom.onMount = (setSelf) => {
+export const locksSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(_locksStorageAtom, {});
+    return;
+  }
   const unsubscribe = DatabaseService.subscribeToLocks((data) => {
-    setSelf(data);
+    set(_locksStorageAtom, data);
   });
   return () => unsubscribe();
-};
+});
 
 // Presence Atom
 const _presenceStorageAtom = atom<AllPresenceData>({});
 export const presenceAtom = atom(
   (get) => get(_presenceStorageAtom),
-  (_, set, newData: AllPresenceData) => set(_presenceStorageAtom, newData)
+  (_, set, newData: AllPresenceData) => set(_presenceStorageAtom, newData),
 );
 
-presenceAtom.onMount = (setSelf) => {
+export const presenceSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(_presenceStorageAtom, {});
+    return;
+  }
   const unsubscribe = DatabaseService.subscribeToPresence((data) => {
-    setSelf(data);
+    set(_presenceStorageAtom, data);
   });
+  DatabaseService.initializePresence(user);
   return () => unsubscribe();
-};
+});
 
 // Context Menu State
 export const contextMenuPosAtom = atom<{ x: number; y: number } | null>(null);
-export const appSettingsMenuPosAtom = atom<{ x: number; y: number } | null>(null);
+export const appSettingsMenuPosAtom = atom<{ x: number; y: number } | null>(
+  null,
+);
 
 // Worker Modal Atoms
 export const isAddWorkerDialogOpenAtom = atom(false);
 
 export const isEditWorkerDialogOpenAtom = atom(false);
-export const editingWorkerAtom = atom<{ id: string; name: string; color: number } | null>(null);
+export const editingWorkerAtom = atom<{
+  id: string;
+  name: string;
+  color: number;
+} | null>(null);
 
 export const isDeleteWorkerDialogOpenAtom = atom(false);
-export const workerToDeleteAtom = atom<{ id: string; name: string } | null>(null);
+export const workerToDeleteAtom = atom<{ id: string; name: string } | null>(
+  null,
+);
 
 export const isWorkerOrderDialogOpenAtom = atom(false);
 
@@ -212,23 +390,60 @@ export const selectedCategoriesAtom = atom<string[]>([]);
 
 // Custom Palette Atom
 // Defaults match the CSS defaults
-const DEFAULT_PALETTE = [
-  "#10B981", "#3B82F6", "#EAB308", "#EF4444", "#F97316", "#A855F7", "#EC4899"
+export const DEFAULT_PALETTE_HEX = [
+  "#10B981", // Green
+  "#3B82F6", // Blue
+  "#EAB308", // Yellow
+  "#EF4444", // Red
+  "#F97316", // Orange
+  "#A855F7", // Purple
+  "#EC4899", // Pink
 ];
-const _customPaletteStorageAtom = atom<string[]>(DEFAULT_PALETTE);
+const _customPalettePrimitiveAtom = atom<string[]>(DEFAULT_PALETTE_HEX);
+const _customPaletteStorageAtom = atom(
+  (get) => get(_customPalettePrimitiveAtom),
+  (_, set, newColors: string[]) => {
+    set(_customPalettePrimitiveAtom, newColors);
+    if (newColors && newColors.length > 0) {
+      newColors.forEach((color, index) => {
+        document.documentElement.style.setProperty(
+          `--color-user-${index + 1}`,
+          color,
+        );
+      });
+    }
+  },
+);
+
+export const customPaletteSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(_customPaletteStorageAtom, DEFAULT_PALETTE_HEX);
+    return;
+  }
+  const unsubscribe = DatabaseService.subscribeToCustomPalette((colors) => {
+    if (colors && Array.isArray(colors) && colors.length > 0) {
+      set(_customPaletteStorageAtom, colors);
+    }
+  });
+  return () => unsubscribe();
+});
 
 export const customPaletteAtom = atom(
   (get) => get(_customPaletteStorageAtom),
   (_, set, newColors: string[]) => {
     set(_customPaletteStorageAtom, newColors);
-  }
+    DatabaseService.saveCustomPalette(newColors);
+  },
 );
 
-customPaletteAtom.onMount = (setSelf) => {
-  const unsubscribe = DatabaseService.subscribeToCustomPalette((colors) => {
-    if (colors && Array.isArray(colors) && colors.length > 0) {
-      setSelf(colors);
-    }
-  });
-  return () => unsubscribe();
-};
+// Drag Origin Atom
+export const dragOriginAtom = atom<DragOrigin | null>(null);
+
+export const dragOriginEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) return;
+  const handleGlobalDragEnd = () => set(dragOriginAtom, null);
+  window.addEventListener("dragend", handleGlobalDragEnd);
+  return () => window.removeEventListener("dragend", handleGlobalDragEnd);
+});

@@ -13,6 +13,12 @@ vi.mock("../DatabaseService", () => ({
   },
 }));
 
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(() => () => {}),
+  GoogleAuthProvider: vi.fn(),
+}));
+
 describe("DueDateDialog", () => {
   const mockTarget: AddToCategoryTarget = {
     id: "note-123",

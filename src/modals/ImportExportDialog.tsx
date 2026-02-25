@@ -3,7 +3,7 @@ import { useAtomValue, useSetAtom } from "jotai";
 import { isImportExportDialogOpenAtom, categoriesAtom, customPaletteAtom, boardDataAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 import type { BackupData } from "../types";
-import { DEFAULT_PALETTE_HEX } from "../constants";
+import { DEFAULT_PALETTE_HEX } from "../atoms";
 
 export function ImportExportDialog() {
   const isOpen = useAtomValue(isImportExportDialogOpenAtom);

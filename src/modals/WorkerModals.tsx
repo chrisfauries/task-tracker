@@ -1,6 +1,6 @@
 import React, {  useState } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
+import { STYLE_MAP, getSolidColorClass } from "../constants";
 import { DatabaseService } from "../DatabaseService";
 import {
   isAddWorkerDialogOpenAtom,
@@ -49,7 +49,7 @@ export function AddWorkerDialog() {
               Default Note Color
             </label>
             <div className="flex justify-center gap-2">
-              {DEFAULT_PALETTE_HEX.map((_, index) => (
+              {STYLE_MAP.map((_, index) => (
                 <button
                   key={index}
                   type="button"
@@ -139,7 +139,7 @@ export function EditWorkerDialog() {
               Default Note Color
             </label>
             <div className="flex justify-center gap-2">
-              {DEFAULT_PALETTE_HEX.map((_, index) => (
+              {STYLE_MAP.map((_, index) => (
                 <button
                   key={index}
                   type="button"

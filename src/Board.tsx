@@ -1,29 +1,17 @@
-import React, { useRef, useCallback } from "react";
+import React, { useRef, useCallback, useEffect } from "react";
 import { useAtomValue } from "jotai";
 import { WorkerRow } from "./WorkerRow";
-import type { User } from "firebase/auth";
 import type {
   HistoryAction,
-  DragOrigin,
 } from "./types";
 import { COLUMN_NAMES } from "./constants";
-import { workerIdsAtom } from "./atoms";
+import { workerIdsAtom, dragOriginAtom } from "./atoms";
 
 interface BoardProps {
-  dragOrigin: DragOrigin | null;
-  onDragStart: (origin: DragOrigin) => void;
-  onDragEnd: () => void;
-  currentUser: User | null;
-  onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
 }
 
 export function Board({
-  dragOrigin,
-  onDragStart,
-  onDragEnd,
-  currentUser,
-  onActivity,
   onHistory,
 }: BoardProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -31,6 +19,7 @@ export function Board({
   const animationFrameId = useRef<number | null>(null);
   
   const workerIds = useAtomValue(workerIdsAtom);
+  const dragOrigin = useAtomValue(dragOriginAtom);
 
   const performAutoScroll = useCallback(() => {
     if (scrollContainerRef.current && (autoScrollSpeed.current.x !== 0 || autoScrollSpeed.current.y !== 0)) {
@@ -103,10 +92,11 @@ export function Board({
     }
   };
 
-  const handleDragEndWrapped = () => {
-    stopAutoScroll();
-    onDragEnd();
-  };
+  useEffect(() => {
+    if (!dragOrigin) {
+      stopAutoScroll();
+    }
+  }, [dragOrigin]);
 
   return (
     <div 
@@ -134,11 +124,6 @@ export function Board({
           <WorkerRow
             key={workerId}
             workerId={workerId}
-            dragOrigin={dragOrigin}
-            onDragStart={onDragStart}
-            onDragEnd={handleDragEndWrapped}
-            currentUser={currentUser}
-            onActivity={onActivity}
             onHistory={onHistory}
           />
         ))}

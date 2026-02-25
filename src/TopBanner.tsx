@@ -1,4 +1,3 @@
-import type { User } from "firebase/auth";
 import type { HistoryAction } from "./types";
 import { UndoRedoControls } from "./UndoRedoControls";
 import { AvatarList } from "./AvatarList";
@@ -7,7 +6,6 @@ import { useSetAtom } from "jotai";
 import { appSettingsMenuPosAtom } from "./atoms";
 
 interface TopBannerProps {
-  user: User | null;
   history: HistoryAction[];
   future: HistoryAction[];
   onUndo: () => void;

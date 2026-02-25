@@ -7,6 +7,7 @@ import {
   isSnapshotDialogOpenAtom,
   snapshotsAtom,
   snapshotsLoadingAtom,
+  _snapshotsStorageAtom,
 } from "../atoms";
 import type { SnapshotsData } from "../types";
 
@@ -17,6 +18,15 @@ vi.mock("../DatabaseService", () => ({
     deleteSnapshot: vi.fn(),
     subscribeToSnapshots: vi.fn(() => () => {}),
   },
+}));
+
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn((_auth, callback) => {
+    callback({ uid: "test-user", displayName: "Test User" });
+    return () => {};
+  }),
+  GoogleAuthProvider: vi.fn(),
 }));
 
 // Mock alert and console
@@ -50,8 +60,11 @@ describe("SnapshotDialog", () => {
     store = createStore();
     // Default: Open, Loaded, Data present
     store.set(isSnapshotDialogOpenAtom, true);
-    store.set(snapshotsLoadingAtom, false);
-    store.set(snapshotsAtom, mockSnapshots);
+    // Mock subscription to return data immediately
+    vi.mocked(DatabaseService.subscribeToSnapshots).mockImplementation((cb) => {
+      cb(mockSnapshots);
+      return () => {};
+    });
   });
 
   const renderDialog = () => {
@@ -69,24 +82,28 @@ describe("SnapshotDialog", () => {
   });
 
   it("renders loading state", () => {
-    store.set(snapshotsAtom, {});
-    store.set(snapshotsLoadingAtom, true);
+    // Mock subscription to NOT return data (pending)
+    vi.mocked(DatabaseService.subscribeToSnapshots).mockImplementation(() => () => {});
+    store.set(_snapshotsStorageAtom, null);
 
     renderDialog();
     expect(screen.getByText("Loading snapshots...")).toBeInTheDocument();
   });
 
-  it("renders empty state", () => {
-    store.set(snapshotsAtom, {});
+  it("renders empty state", async () => {
+    vi.mocked(DatabaseService.subscribeToSnapshots).mockImplementation((cb) => {
+      cb({});
+      return () => {};
+    });
     renderDialog();
-    expect(screen.getByText("No snapshots available yet.")).toBeInTheDocument();
+    expect(await screen.findByText("No snapshots available yet.")).toBeInTheDocument();
   });
 
-  it("renders snapshots list sorted by timestamp descending", () => {
+  it("renders snapshots list sorted by timestamp descending", async () => {
     renderDialog();
 
-    const titles = screen
-      .getAllByRole("heading", { level: 3 })
+    const headings = await screen.findAllByRole("heading", { level: 3 });
+    const titles = headings
       .map((h) => h.textContent);
     // snap2 (timestamp 2000) should come before snap1 (timestamp 1000)
     expect(titles).toEqual(["Backup B", "Backup A"]);
@@ -109,7 +126,7 @@ describe("SnapshotDialog", () => {
       renderDialog();
 
       // Click first Restore button (for Backup B)
-      const restoreButtons = screen.getAllByText("Restore", {
+      const restoreButtons = await screen.findAllByText("Restore", {
         selector: "button",
       });
       fireEvent.click(restoreButtons[0]);
@@ -129,7 +146,7 @@ describe("SnapshotDialog", () => {
 
     it("cancels restore confirmation", async () => {
       renderDialog();
-      const restoreButtons = screen.getAllByText("Restore", {
+      const restoreButtons = await screen.findAllByText("Restore", {
         selector: "button",
       });
       fireEvent.click(restoreButtons[0]);
@@ -145,7 +162,7 @@ describe("SnapshotDialog", () => {
     it("shows confirmation and deletes on yes", async () => {
       renderDialog();
 
-      const deleteButtons = screen.getAllByTitle("Delete Snapshot");
+      const deleteButtons = await screen.findAllByTitle("Delete Snapshot");
       fireEvent.click(deleteButtons[0]);
 
       expect(screen.getByText("Confirm Delete")).toBeInTheDocument();
@@ -161,7 +178,7 @@ describe("SnapshotDialog", () => {
     it("cancels delete confirmation", async () => {
       renderDialog();
 
-      const deleteButtons = screen.getAllByTitle("Delete Snapshot");
+      const deleteButtons = await screen.findAllByTitle("Delete Snapshot");
       fireEvent.click(deleteButtons[0]);
 
       // Cancel button is labeled 'X' in the delete confirmation block
@@ -176,7 +193,7 @@ describe("SnapshotDialog", () => {
     renderDialog();
 
     // 1. Activate Restore on Item 1
-    const restoreButtons = screen.getAllByText("Restore", {
+    const restoreButtons = await screen.findAllByText("Restore", {
       selector: "button",
     });
     fireEvent.click(restoreButtons[0]);

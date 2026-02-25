@@ -4,6 +4,7 @@ import {
   isSnapshotDialogOpenAtom,
   snapshotsAtom,
   snapshotsLoadingAtom,
+  snapshotsSyncEffect,
 } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 import type { SavedSnapshot } from "../types";
@@ -15,6 +16,7 @@ export function SnapshotDialog() {
 }
 
 function SnapshotDialogContent() {
+  useAtomValue(snapshotsSyncEffect);
   const setIsOpen = useSetAtom(isSnapshotDialogOpenAtom);
   const sortedSnapshots = useAtomValue(snapshotsAtom);
   const loading = useAtomValue(snapshotsLoadingAtom);
@@ -29,7 +31,7 @@ function SnapshotDialogContent() {
       await DatabaseService.restoreBackup(
         snap.boardData || {},
         snap.categories || {},
-        [] // Assuming empty custom colors for snapshot restore as per previous logic
+        [], // Assuming empty custom colors for snapshot restore as per previous logic
       );
       alert("Board restored successfully!");
       setConfirmRestoreId(null);

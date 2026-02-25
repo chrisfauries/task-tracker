@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { SearchAndFilter } from "./SearchAndFilter";
@@ -8,6 +8,12 @@ import {
   categoriesAtom,
 } from "./atoms";
 import type { CategoriesData } from "./types";
+
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(() => () => {}),
+  GoogleAuthProvider: vi.fn(),
+}));
 
 describe("SearchAndFilter Component", () => {
   let store: ReturnType<typeof createStore>;

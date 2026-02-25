@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { DatabaseService } from "./DatabaseService";
 import { getNoteStyles } from "./constants";
-import type { User } from "firebase/auth";
 import type { HistoryAction } from "./types";
 import { NoteMenu } from "./NoteMenu";
 import { useSetAtom, useAtomValue } from "jotai";
@@ -12,6 +11,8 @@ import {
   selectedCategoriesAtom,
   locksAtom,
   noteFamily,
+  trackActivityAtom,
+  userAtom,
 } from "./atoms";
 
 interface StickyNoteProps {
@@ -30,8 +31,6 @@ interface StickyNoteProps {
   onDragEnd: () => void;
   isNew?: boolean;
   onEditStarted?: () => void;
-  currentUser: User | null;
-  onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
 }
 
@@ -86,8 +85,6 @@ export function StickyNote({
   onDragEnd,
   isNew,
   onEditStarted,
-  currentUser,
-  onActivity,
   onHistory,
 }: StickyNoteProps) {
   const note = useAtomValue(noteFamily(`${workerId}::${id}`));
@@ -98,6 +95,8 @@ export function StickyNote({
 
   const searchQuery = useAtomValue(searchQueryAtom);
   const selectedCategories = useAtomValue(selectedCategoriesAtom);
+  const onActivity = useSetAtom(trackActivityAtom);
+  const currentUser = useAtomValue(userAtom);
 
   const [dropIndicator, setDropIndicator] = useState<"left" | "right" | null>(null);
   const [isDragging, setIsDragging] = useState(false);

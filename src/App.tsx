@@ -1,12 +1,6 @@
-import { useState, useEffect } from "react";
-import { signInWithPopup, onAuthStateChanged, signOut } from "firebase/auth";
-import type { User } from "firebase/auth";
-import { useAtom, useAtomValue } from "jotai";
+import { signInWithPopup } from "firebase/auth";
+import { useAtomValue } from "jotai";
 import { auth, provider } from "./firebase";
-import { DatabaseService } from "./DatabaseService";
-import type { DragOrigin } from "./types";
-import { usePresence } from "./hooks/usePresence";
-import { useSnapshots } from "./hooks/useSnapshots";
 import { useHistory } from "./hooks/useHistory";
 import { TopBanner } from "./TopBanner";
 import { Board } from "./Board";
@@ -26,114 +20,37 @@ import {
   DeleteWorkerDialog,
 } from "./modals/WorkerModals";
 import {
-  customPaletteAtom,
-  darkModeAtom,
-  boardDataAtom,
-  categoriesAtom
+  userAtom,
+  darkModeSyncEffect,
+  boardDataSyncEffect,
+  categoriesSyncEffect,
+  locksSyncEffect,
+  presenceSyncEffect,
+  customPaletteSyncEffect,
+  darkModeDomEffect,
+  snapshotsLoginSyncEffect,
+  dragOriginEffect,
 } from "./atoms";
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const user = useAtomValue(userAtom);
 
-  // Custom Hooks
-  usePresence(user);
-  const boardData = useAtomValue(boardDataAtom);
-  const categories = useAtomValue(categoriesAtom);
-  const { saveSnapshot, trackActivity } = useSnapshots(
-    user,
-    boardData,
-    categories
-  );
+  // Sync Effects
+  useAtomValue(darkModeDomEffect);
+  useAtomValue(darkModeSyncEffect);
+  useAtomValue(boardDataSyncEffect);
+  useAtomValue(categoriesSyncEffect);
+  useAtomValue(locksSyncEffect);
+  useAtomValue(presenceSyncEffect);
+  useAtomValue(customPaletteSyncEffect);
+  useAtomValue(snapshotsLoginSyncEffect);
+  useAtomValue(dragOriginEffect);
+
   const { history, future, registerHistory, handleUndo, handleRedo } =
-    useHistory(user, trackActivity);
-
-  // Local UI State
-  const [dragOrigin, setDragOrigin] = useState<DragOrigin | null>(null);
-
-  // Dark Mode Logic
-  const [darkMode] = useAtom(darkModeAtom);
-
-  useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [darkMode]);
-  
-  // Custom Palette State
-  const [customPalette] = useAtom(customPaletteAtom);
-
-  // SYNC: Update CSS Variables when customPalette changes
-  useEffect(() => {
-    if (customPalette && customPalette.length > 0) {
-      customPalette.forEach((color, index) => {
-        document.documentElement.style.setProperty(`--color-user-${index + 1}`, color);
-      });
-    }
-  }, [customPalette]);
-
-  useEffect(() => {
-    if (!user) return;
-    const handleGlobalDragEnd = () => setDragOrigin(null);
-    window.addEventListener("dragend", handleGlobalDragEnd);
-    return () => window.removeEventListener("dragend", handleGlobalDragEnd);
-  }, [user]);
-
-  useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-    return () => unsubscribeAuth();
-  }, []);
+    useHistory();
 
   const handleLogin = () => {
     signInWithPopup(auth, provider);
-  };
-
-  const handleLogout = async () => {
-    if (user) {
-      const timeStr = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-      const dateStr = new Date().toLocaleDateString();
-      await saveSnapshot(
-        `${user.displayName} logged out @ ${timeStr} on ${dateStr}`
-      );
-    }
-    signOut(auth);
-  };
-
-  const handleApplyCategory = async (
-    catId: string,
-    workerId: string,
-    colIndex: number
-  ) => {
-    const category = categories[catId];
-    if (!category || !category.items) return;
-
-    trackActivity();
-    const workerNotes = boardData[workerId]?.notes || {};
-    const validPositions = Object.values(workerNotes)
-      .filter(
-        (n) =>
-          n.column === colIndex &&
-          typeof n.position === "number" &&
-          !isNaN(n.position)
-      )
-      .map((n) => n.position);
-    const lastPos = validPositions.length > 0 ? Math.max(...validPositions) : 0;
-
-    for (const [index, text] of category.items.entries()) {
-      await DatabaseService.createNote(workerId, {
-        text,
-        column: colIndex,
-        color: category.color !== undefined ? category.color : 0,
-        position: lastPos + 1000 + index * 10,
-        categoryName: category.name,
-      });
-    }
   };
 
   if (!user) {
@@ -147,12 +64,9 @@ export default function App() {
     >
       <ContextMenu />
 
-      <AppSettingsMenu
-        onLogout={handleLogout}
-      />
+      <AppSettingsMenu />
 
       <TopBanner
-        user={user}
         history={history}
         future={future}
         onUndo={handleUndo}
@@ -160,11 +74,6 @@ export default function App() {
       />
 
       <Board
-        dragOrigin={dragOrigin}
-        onDragStart={setDragOrigin}
-        onDragEnd={() => setDragOrigin(null)}
-        currentUser={user}
-        onActivity={trackActivity}
         onHistory={registerHistory}
       />
 
@@ -176,9 +85,7 @@ export default function App() {
       <WorkerOrderDialog />
       <EditWorkerDialog />
       <DeleteWorkerDialog />
-      <CategoryManagementDialog
-        onApply={handleApplyCategory}
-      />
+      <CategoryManagementDialog />
       <CustomColorsDialog />
       <ImportExportDialog />
     </div>

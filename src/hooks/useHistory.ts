@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { useSetAtom, useAtomValue } from "jotai";
 import { DatabaseService } from "../DatabaseService";
-import type { User } from "firebase/auth";
+import { trackActivityAtom, userAtom } from "../atoms";
 import type { HistoryAction } from "../types";
 
-export function useHistory(user: User | null, trackActivity: () => void) {
+export function useHistory() {
+  const user = useAtomValue(userAtom);
+  const trackActivity = useSetAtom(trackActivityAtom);
   const [history, setHistory] = useState<HistoryAction[]>([]);
   const [future, setFuture] = useState<HistoryAction[]>([]);
 
@@ -16,7 +19,7 @@ export function useHistory(user: User | null, trackActivity: () => void) {
 
   const registerHistory = (action: HistoryAction) => {
     setHistory((prev) => [...prev, action]);
-    setFuture([]); 
+    setFuture([]);
     trackActivity();
   };
 
@@ -28,29 +31,49 @@ export function useHistory(user: User | null, trackActivity: () => void) {
     trackActivity();
 
     switch (action.type) {
-      case "MOVE":
-        const currentNote = await DatabaseService.getNote(action.newWorkerId, action.noteId);
+      case "MOVE": {
+        const currentNote = await DatabaseService.getNote(
+          action.newWorkerId,
+          action.noteId,
+        );
         if (currentNote) {
           // Move back to old location
           await DatabaseService.moveNote(
             action.noteId,
             action.newWorkerId, // current loc
             action.prevWorkerId, // target loc (old)
-            { ...currentNote, column: action.prevCol, position: action.prevPos }
+            {
+              ...currentNote,
+              column: action.prevCol,
+              position: action.prevPos,
+            },
           );
         }
         break;
+      }
       case "ADD":
         await DatabaseService.deleteNote(action.workerId, action.noteId);
         break;
       case "DELETE":
-        await DatabaseService.addNote(action.workerId, action.noteId, action.noteData);
+        await DatabaseService.addNote(
+          action.workerId,
+          action.noteId,
+          action.noteData,
+        );
         break;
       case "EDIT_TEXT":
-        await DatabaseService.updateNoteText(action.workerId, action.noteId, action.prevText);
+        await DatabaseService.updateNoteText(
+          action.workerId,
+          action.noteId,
+          action.prevText,
+        );
         break;
       case "EDIT_COLOR":
-        await DatabaseService.updateNoteColor(action.workerId, action.noteId, action.prevColor);
+        await DatabaseService.updateNoteColor(
+          action.workerId,
+          action.noteId,
+          action.prevColor,
+        );
         break;
     }
   };
@@ -63,28 +86,44 @@ export function useHistory(user: User | null, trackActivity: () => void) {
     trackActivity();
 
     switch (action.type) {
-      case "MOVE":
-        const currentNote = await DatabaseService.getNote(action.prevWorkerId, action.noteId);
+      case "MOVE": {
+        const currentNote = await DatabaseService.getNote(
+          action.prevWorkerId,
+          action.noteId,
+        );
         if (currentNote) {
-           await DatabaseService.moveNote(
+          await DatabaseService.moveNote(
             action.noteId,
             action.prevWorkerId,
             action.newWorkerId,
-            { ...currentNote, column: action.newCol, position: action.newPos }
+            { ...currentNote, column: action.newCol, position: action.newPos },
           );
         }
         break;
+      }
       case "ADD":
-        await DatabaseService.addNote(action.workerId, action.noteId, action.noteData);
+        await DatabaseService.addNote(
+          action.workerId,
+          action.noteId,
+          action.noteData,
+        );
         break;
       case "DELETE":
         await DatabaseService.deleteNote(action.workerId, action.noteId);
         break;
       case "EDIT_TEXT":
-        await DatabaseService.updateNoteText(action.workerId, action.noteId, action.newText);
+        await DatabaseService.updateNoteText(
+          action.workerId,
+          action.noteId,
+          action.newText,
+        );
         break;
       case "EDIT_COLOR":
-        await DatabaseService.updateNoteColor(action.workerId, action.noteId, action.newColor);
+        await DatabaseService.updateNoteColor(
+          action.workerId,
+          action.noteId,
+          action.newColor,
+        );
         break;
     }
   };

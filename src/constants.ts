@@ -8,7 +8,7 @@ export type COLUMN_NAME = typeof COLUMN_NAMES[keyof typeof COLUMN_NAMES];
 
 export const BELL_SOUND_URL = "/bell.mp3";
 
-const STYLE_MAP = [
+export const STYLE_MAP = [
   { bg: "bg-user-1", border: "border-user-1", text: "text-user-1" }, // Index 0
   { bg: "bg-user-2", border: "border-user-2", text: "text-user-2" }, // Index 1
   { bg: "bg-user-3", border: "border-user-3", text: "text-user-3" }, // Index 2
@@ -57,14 +57,3 @@ export const getSolidColorClass = (colorIndex: number | undefined) => {
     : 0;
   return STYLE_MAP[idx].bg;
 };
-
-// Defines the raw hex codes for defaults only (used in atoms.ts/CustomColorDialog)
-export const DEFAULT_PALETTE_HEX = [
-  "#10B981", // Green
-  "#3B82F6", // Blue
-  "#EAB308", // Yellow
-  "#EF4444", // Red
-  "#F97316", // Orange
-  "#A855F7", // Purple
-  "#EC4899", // Pink
-];

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAtom, useAtomValue, useSetAtom } from "jotai";
-import { DEFAULT_PALETTE_HEX, getSolidColorClass } from "../constants";
+import {  STYLE_MAP, getSolidColorClass } from "../constants";
 import { DatabaseService } from "../DatabaseService";
 import {
   categoriesAtom,
@@ -125,7 +125,7 @@ function AddToCategoryDialogContent() {
 
           {/* Color Picker */}
           <div className="flex gap-2 mt-3">
-            {DEFAULT_PALETTE_HEX.map((_, index) => (
+            {STYLE_MAP.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setSelectedColor(index)}

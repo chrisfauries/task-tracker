@@ -31,6 +31,12 @@ vi.mock("./DatabaseService", () => ({
   },
 }));
 
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(() => () => {}),
+  GoogleAuthProvider: vi.fn(),
+}));
+
 describe("Integration: EventBoundary & ContextMenu", () => {
   let store: ReturnType<typeof createStore>;
 
@@ -157,7 +163,6 @@ describe("Integration: Search, Filter & StickyNote", () => {
       onDragStart: vi.fn(),
       onDragEnd: vi.fn(),
       currentUser: { uid: "user-1" } as any,
-      onActivity: vi.fn(),
       onHistory: vi.fn(),
     };
 

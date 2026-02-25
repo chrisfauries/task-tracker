@@ -15,6 +15,12 @@ vi.mock("../DatabaseService", () => ({
   },
 }));
 
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(() => () => {}),
+  GoogleAuthProvider: vi.fn(),
+}));
+
 describe("CustomColorsDialog", () => {
   let store: ReturnType<typeof createStore>;
   const DEFAULT_PALETTE = [

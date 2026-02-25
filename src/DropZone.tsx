@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { useAtomValue } from "jotai";
+import { useAtomValue, useSetAtom, useAtom } from "jotai";
 import { ref, set, push, remove, onValue, get } from "firebase/database";
 import { db } from "./firebase";
 import { BELL_SOUND_URL } from "./constants";
 import { StickyNote } from "./StickyNote";
-import type { User } from "firebase/auth";
-import type { Note, HistoryAction, DragOrigin } from "./types";
-import { columnNotesListFamily } from "./atoms";
+import type { Note, HistoryAction } from "./types";
+import { columnNotesListFamily, trackActivityAtom, dragOriginAtom } from "./atoms";
 
 interface DropZoneProps {
   workerId: string;
   colIndex: number;
   defaultColor?: number;
-  dragOrigin: DragOrigin | null;
-  onDragStart: (origin: DragOrigin) => void;
-  onDragEnd: () => void;
-  currentUser: User | null;
-  onActivity: () => void;
   onHistory: (action: HistoryAction) => void;
 }
 
@@ -24,15 +18,12 @@ export function DropZone({
   workerId,
   colIndex,
   defaultColor,
-  dragOrigin,
-  onDragStart,
-  onDragEnd,
-  currentUser,
-  onActivity,
   onHistory,
 }: DropZoneProps) {
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
+  const onActivity = useSetAtom(trackActivityAtom);
+  const [dragOrigin, setDragOrigin] = useAtom(dragOriginAtom);
 
   // Subscribe only to the IDs & Positions array
   const sortedNoteItems = useAtomValue(columnNotesListFamily(`${workerId}::${colIndex}`));
@@ -98,7 +89,7 @@ export function DropZone({
   const handleTrashDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    onDragEnd();
+    setDragOrigin(null);
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
     try {
@@ -128,7 +119,7 @@ export function DropZone({
   const handleContainerDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsOver(false);
-    onDragEnd();
+    setDragOrigin(null);
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
     try {
@@ -199,12 +190,10 @@ export function DropZone({
                 : null
             }
             onReorder={handleMove}
-            onDragStart={() => onDragStart({ workerId, colIndex })}
-            onDragEnd={onDragEnd}
+            onDragStart={() => setDragOrigin({ workerId, colIndex })}
+            onDragEnd={() => setDragOrigin(null)}
             isNew={noteItem.id === autoEditId}
             onEditStarted={() => setAutoEditId(null)}
-            currentUser={currentUser}
-            onActivity={onActivity}
             onHistory={onHistory}
           />
         ))}

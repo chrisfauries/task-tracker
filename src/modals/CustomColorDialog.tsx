@@ -1,8 +1,6 @@
 import React, { useState } from "react";
-import { useAtomValue, useSetAtom } from "jotai";
-import { customPaletteAtom, isCustomColorsDialogOpenAtom } from "../atoms";
-import { DatabaseService } from "../DatabaseService";
-import { DEFAULT_PALETTE_HEX } from "../constants";
+import { useAtomValue, useSetAtom, useAtom } from "jotai";
+import { customPaletteAtom, isCustomColorsDialogOpenAtom, DEFAULT_PALETTE_HEX } from "../atoms";
 
 export function CustomColorsDialog() {
   const isOpen = useAtomValue(isCustomColorsDialogOpenAtom);
@@ -17,27 +15,24 @@ const SLOT_NAMES = ["One", "Two", "Three", "Four", "Five", "Six", "Seven"];
 
 function CustomColorsDialogContent() {
   const setIsOpen = useSetAtom(isCustomColorsDialogOpenAtom);
-  // Read the current live palette from the global state (which is synced with DB)
-  const currentPalette = useAtomValue(customPaletteAtom);
-  
-  // Initialize local state for editing
-  const [colors, setColors] = useState<string[]>(currentPalette);
+  const [currentPalette, setCustomPalette] = useAtom(customPaletteAtom);
+  const [localColors, setLocalColors] = useState<string[]>(currentPalette);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
   const handleClose = () => setIsOpen(false);
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newColors = [...colors];
+    const newColors = [...localColors];
     newColors[selectedIndex] = e.target.value;
-    setColors(newColors);
+    setLocalColors(newColors);
   };
 
   const handleReset = () => {
-    setColors(DEFAULT_PALETTE_HEX);
+    setLocalColors(DEFAULT_PALETTE_HEX);
   };
 
   const handleSave = () => {
-    DatabaseService.saveCustomPalette(colors);
+    setCustomPalette(localColors);
     handleClose();
   };
 
@@ -62,7 +57,7 @@ function CustomColorsDialogContent() {
     };
   };
 
-  const currentStyles = getPreviewStyles(colors[selectedIndex]);
+  const currentStyles = getPreviewStyles(localColors[selectedIndex]);
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4">
@@ -88,7 +83,7 @@ function CustomColorsDialogContent() {
           <div className="w-full md:w-1/3 bg-slate-50 dark:bg-slate-800 border-r dark:border-slate-700 p-6 overflow-y-auto">
             <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Color Slots</h3>
             <div className="space-y-3">
-              {colors.map((color, idx) => (
+              {localColors.map((color, idx) => (
                 <button
                   key={idx}
                   onClick={() => setSelectedIndex(idx)}
@@ -126,11 +121,11 @@ function CustomColorsDialogContent() {
                 <div className="relative group cursor-pointer">
                   <div 
                     className="w-24 h-24 rounded-2xl shadow-lg border-4 border-white dark:border-slate-700 ring-1 ring-slate-200 dark:ring-slate-600 overflow-hidden"
-                    style={{ backgroundColor: colors[selectedIndex] }}
+                    style={{ backgroundColor: localColors[selectedIndex] }}
                   />
                   <input
                     type="color"
-                    value={colors[selectedIndex]}
+                    value={localColors[selectedIndex]}
                     onChange={handleColorChange}
                     className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                   />
@@ -142,12 +137,12 @@ function CustomColorsDialogContent() {
                   <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">Hex Code</label>
                   <input 
                     type="text" 
-                    value={colors[selectedIndex]}
+                    value={localColors[selectedIndex]}
                     onChange={(e) => {
                       const val = e.target.value;
-                      const newColors = [...colors];
+                      const newColors = [...localColors];
                       newColors[selectedIndex] = val;
-                      setColors(newColors);
+                      setLocalColors(newColors);
                     }}
                     className="w-full px-4 py-2 border dark:border-slate-600 rounded-lg font-mono text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:ring-2 focus:ring-indigo-400 outline-none uppercase"
                   />

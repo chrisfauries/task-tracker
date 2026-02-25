@@ -14,6 +14,7 @@ vi.mock("../DatabaseService", () => ({
     createCategory: vi.fn(),
     deleteCategory: vi.fn(),
     updateCategory: vi.fn(),
+    createNote: vi.fn(),
     subscribeToCategories: vi.fn(() => () => {}),
     subscribeToBoardData: vi.fn(() => () => {}),
     subscribeToLocks: vi.fn(() => () => {}),
@@ -23,9 +24,14 @@ vi.mock("../DatabaseService", () => ({
   },
 }));
 
+vi.mock("firebase/auth", () => ({
+  getAuth: vi.fn(),
+  onAuthStateChanged: vi.fn(() => () => {}),
+  GoogleAuthProvider: vi.fn(),
+}));
+
 describe("CategoryManagementDialog", () => {
   let store: ReturnType<typeof createStore>;
-  const onApplyMock = vi.fn();
 
   // Mock Data
   const mockCategories: CategoriesData = {
@@ -68,9 +74,7 @@ describe("CategoryManagementDialog", () => {
   const renderDialog = () => {
     return render(
       <Provider store={store}>
-        <CategoryManagementDialog
-          onApply={onApplyMock}
-        />
+        <CategoryManagementDialog />
       </Provider>
     );
   };
@@ -373,7 +377,7 @@ describe("CategoryManagementDialog", () => {
       await waitFor(() => screen.getByText("Push Category to Board"));
     });
 
-    it("calls onApply when a specific column button is clicked", async () => {
+    it("calls createNote when a specific column button is clicked", async () => {
       // Find row for John Doe
       const workerRow = screen.getByText("John Doe").closest("div");
       
@@ -382,8 +386,10 @@ describe("CategoryManagementDialog", () => {
       fireEvent.click(assignedBtn);
 
       await waitFor(() => {
-        // onApply(catId, workerId, colIndex)
-        expect(onApplyMock).toHaveBeenCalledWith("cat-1", "worker-1", 0);
+        // Expect createNote to be called for items in the category
+        expect(DatabaseService.createNote).toHaveBeenCalledWith("worker-1", expect.objectContaining({
+          text: "Algebra"
+        }));
       });
     });
 
