@@ -1,7 +1,6 @@
 import { signInWithPopup } from "firebase/auth";
 import { useAtomValue } from "jotai";
 import { auth, provider } from "./firebase";
-import { useHistory } from "./hooks/useHistory";
 import { TopBanner } from "./TopBanner";
 import { Board } from "./Board";
 import { ContextMenu } from "./ContextMenu";
@@ -30,6 +29,7 @@ import {
   darkModeDomEffect,
   snapshotsLoginSyncEffect,
   dragOriginEffect,
+  historyEffectAtom,
 } from "./atoms";
 
 export default function App() {
@@ -45,9 +45,7 @@ export default function App() {
   useAtomValue(customPaletteSyncEffect);
   useAtomValue(snapshotsLoginSyncEffect);
   useAtomValue(dragOriginEffect);
-
-  const { history, future, registerHistory, handleUndo, handleRedo } =
-    useHistory();
+  useAtomValue(historyEffectAtom);
 
   const handleLogin = () => {
     signInWithPopup(auth, provider);
@@ -66,16 +64,9 @@ export default function App() {
 
       <AppSettingsMenu />
 
-      <TopBanner
-        history={history}
-        future={future}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-      />
+      <TopBanner />
 
-      <Board
-        onHistory={registerHistory}
-      />
+      <Board />
 
       {/* DIALOGS */}
       <DueDateDialog />

@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { DatabaseService } from "./DatabaseService";
 import { getNoteStyles } from "./constants";
-import type { HistoryAction } from "./types";
 import { NoteMenu } from "./NoteMenu";
 import { useSetAtom, useAtomValue } from "jotai";
 import {
@@ -11,6 +10,7 @@ import {
   selectedCategoriesAtom,
   locksAtom,
   noteFamily,
+  registerHistoryAtom,
   trackActivityAtom,
   userAtom,
 } from "./atoms";
@@ -31,7 +31,6 @@ interface StickyNoteProps {
   onDragEnd: () => void;
   isNew?: boolean;
   onEditStarted?: () => void;
-  onHistory: (action: HistoryAction) => void;
 }
 
 // Helper to format due date label
@@ -85,16 +84,15 @@ export function StickyNote({
   onDragEnd,
   isNew,
   onEditStarted,
-  onHistory,
 }: StickyNoteProps) {
-  const note = useAtomValue(noteFamily(`${workerId}::${id}`));
-  
+  const note = useAtomValue(noteFamily({workerId, noteId: id}));
   const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
   const setContextMenuPos = useSetAtom(contextMenuPosAtom);
   const locks = useAtomValue(locksAtom);
 
   const searchQuery = useAtomValue(searchQueryAtom);
   const selectedCategories = useAtomValue(selectedCategoriesAtom);
+  const onHistory = useSetAtom(registerHistoryAtom);
   const onActivity = useSetAtom(trackActivityAtom);
   const currentUser = useAtomValue(userAtom);
 
@@ -514,7 +512,6 @@ export function StickyNote({
           isLockedByOther={!!isLockedByOther}
           onDelete={handleDelete}
           onActivity={onActivity}
-          onHistory={onHistory}
           acquireLock={acquireLock}
           releaseLock={releaseLock}
         />

@@ -1,5 +1,5 @@
 import { atom } from "jotai";
-import { atomEffect, withAtomEffect } from "jotai-effect";
+import { atomEffect } from "jotai-effect";
 import { selectAtom } from "jotai/utils";
 import { atomFamily } from "jotai-family";
 import { onAuthStateChanged, signOut } from "firebase/auth";
@@ -14,6 +14,7 @@ import type {
   LocksData,
   AllPresenceData,
   DragOrigin,
+  HistoryAction,
 } from "./types";
 
 // User Atom
@@ -213,49 +214,75 @@ export const workerIdsAtom = selectAtom(
 );
 
 export const workerFamily = atomFamily((workerId: string) =>
-  atom((get) => get(boardDataAtom)[workerId]),
+  selectAtom(
+    boardDataAtom,
+    (board) => board[workerId],
+    (prev, next) => JSON.stringify(prev) === JSON.stringify(next), // TODO: this is probably slow
+  ),
 );
 
+export const workerNameFamily = atomFamily((workerId: string) =>
+  selectAtom(boardDataAtom, (board) => board[workerId].name),
+);
+
+export const workerDefaultColorFamily = atomFamily((workerId: string) =>
+  selectAtom(boardDataAtom, (board) => board[workerId].defaultColor),
+);
+
+interface NoteListKey {
+  workerId: string;
+  colIndex: number;
+}
+
 // worker notes list family (positioning)
-export const columnNotesListFamily = atomFamily((workerColKey: string) => {
-  const [workerId, colIndexStr] = workerColKey.split("::");
-  const colIndex = parseInt(colIndexStr, 10);
+export const columnNotesListFamily = atomFamily(
+  ({ workerId, colIndex }: NoteListKey) =>
+    selectAtom(
+      workerFamily(workerId),
+      (worker) => {
+        if (!worker || !worker.notes) return [];
 
-  return selectAtom(
-    workerFamily(workerId),
-    (worker) => {
-      if (!worker || !worker.notes) return [];
+        return Object.entries(worker.notes)
+          .filter(
+            ([_, n]) =>
+              n.column === colIndex &&
+              typeof n.position === "number" &&
+              !isNaN(n.position),
+          )
+          .map(([id, n]) => ({ id, position: n.position }))
+          .sort((a, b) => a.position - b.position);
+      },
+      // Custom deep equality for the array of objects so we only trigger updates if order or IDs change
+      (prev, next) => {
+        if (prev.length !== next.length) return false;
+        for (let i = 0; i < prev.length; i++) {
+          if (
+            prev[i].id !== next[i].id ||
+            prev[i].position !== next[i].position
+          )
+            return false;
+        }
+        return true;
+      },
+    ),
+  (a, b) => a.workerId === b.workerId && a.colIndex === b.colIndex,
+);
 
-      return Object.entries(worker.notes)
-        .filter(
-          ([_, n]) =>
-            n.column === colIndex &&
-            typeof n.position === "number" &&
-            !isNaN(n.position),
-        )
-        .map(([id, n]) => ({ id, position: n.position }))
-        .sort((a, b) => a.position - b.position);
-    },
-    // Custom deep equality for the array of objects so we only trigger updates if order or IDs change
-    (prev, next) => {
-      if (prev.length !== next.length) return false;
-      for (let i = 0; i < prev.length; i++) {
-        if (prev[i].id !== next[i].id || prev[i].position !== next[i].position)
-          return false;
-      }
-      return true;
-    },
-  );
-});
+interface NoteKey {
+  workerId: string;
+  noteId: string;
+}
 
 // Worker Note
-export const noteFamily = atomFamily((workerNoteKey: string) => {
-  const [workerId, noteId] = workerNoteKey.split("::");
-  return atom((get) => {
-    const worker = get(workerFamily(workerId));
-    return worker?.notes?.[noteId] || null;
-  });
-});
+export const noteFamily = atomFamily(
+  ({ workerId, noteId }: NoteKey) =>
+    selectAtom(
+      boardDataAtom,
+      (board) => board[workerId].notes?.[noteId],
+      (prev, next) => JSON.stringify(prev) === JSON.stringify(next), // TODO: this is probably slow
+    ),
+  (a, b) => a.workerId === b.workerId && a.noteId === b.noteId,
+);
 
 // Category Atoms
 const _categoriesStorageAtom = atom<CategoriesData>({});
@@ -281,10 +308,18 @@ export const categoriesSyncEffect = atomEffect((get, set) => {
 
 export const applyCategoryAtom = atom(
   null,
-  async (get, set, { catId, workerId, colIndex }: { catId: string; workerId: string; colIndex: number }) => {
+  async (
+    get,
+    set,
+    {
+      catId,
+      workerId,
+      colIndex,
+    }: { catId: string; workerId: string; colIndex: number },
+  ) => {
     const categories = get(categoriesAtom);
     const boardData = get(boardDataAtom);
-    
+
     const category = categories[catId];
     if (!category || !category.items) return;
 
@@ -310,7 +345,7 @@ export const applyCategoryAtom = atom(
         categoryName: category.name,
       });
     }
-  }
+  },
 );
 
 // Locks Atom
@@ -446,4 +481,159 @@ export const dragOriginEffect = atomEffect((get, set) => {
   const handleGlobalDragEnd = () => set(dragOriginAtom, null);
   window.addEventListener("dragend", handleGlobalDragEnd);
   return () => window.removeEventListener("dragend", handleGlobalDragEnd);
+});
+
+// History Atoms
+const historyListAtom = atom<HistoryAction[]>([]);
+const pointerAtom = atom<number>(-1);
+
+export const historyAtom = atom((get) => {
+  const list = get(historyListAtom);
+  const pointer = get(pointerAtom);
+  return list.slice(0, pointer + 1);
+});
+
+export const futureAtom = atom((get) => {
+  const list = get(historyListAtom);
+  const pointer = get(pointerAtom);
+  return list.slice(pointer + 1).reverse();
+});
+
+export const canUndoAtom = atom((get) => get(pointerAtom) >= 0);
+
+export const canRedoAtom = atom((get) => {
+  const list = get(historyListAtom);
+  const pointer = get(pointerAtom);
+  return pointer < list.length - 1;
+});
+
+export const registerHistoryAtom = atom(
+  null,
+  (get, set, action: HistoryAction) => {
+    const list = get(historyListAtom);
+    const pointer = get(pointerAtom);
+    const newHistory = list.slice(0, pointer + 1);
+    set(historyListAtom, [...newHistory, action]);
+    set(pointerAtom, pointer + 1);
+    set(trackActivityAtom);
+  },
+);
+
+export const undoAtom = atom(null, async (get, set) => {
+  const pointer = get(pointerAtom);
+  const historyList = get(historyListAtom);
+
+  if (pointer < 0) return;
+
+  const action = historyList[pointer];
+  set(pointerAtom, pointer - 1);
+  set(trackActivityAtom);
+
+  switch (action.type) {
+    case "MOVE": {
+      const currentNote = await DatabaseService.getNote(
+        action.newWorkerId,
+        action.noteId,
+      );
+      if (currentNote) {
+        // Move back to old location
+        await DatabaseService.moveNote(
+          action.noteId,
+          action.newWorkerId, // current loc
+          action.prevWorkerId, // target loc (old)
+          {
+            ...currentNote,
+            column: action.prevCol,
+            position: action.prevPos,
+          },
+        );
+      }
+      break;
+    }
+    case "ADD":
+      await DatabaseService.deleteNote(action.workerId, action.noteId);
+      break;
+    case "DELETE":
+      await DatabaseService.addNote(
+        action.workerId,
+        action.noteId,
+        action.noteData,
+      );
+      break;
+    case "EDIT_TEXT":
+      await DatabaseService.updateNoteText(
+        action.workerId,
+        action.noteId,
+        action.prevText,
+      );
+      break;
+    case "EDIT_COLOR":
+      await DatabaseService.updateNoteColor(
+        action.workerId,
+        action.noteId,
+        action.prevColor,
+      );
+      break;
+  }
+});
+
+export const redoAtom = atom(null, async (get, set) => {
+  const pointer = get(pointerAtom);
+  const historyList = get(historyListAtom);
+
+  if (pointer >= historyList.length - 1) return;
+
+  const action = historyList[pointer + 1];
+  set(pointerAtom, pointer + 1);
+  set(trackActivityAtom);
+
+  switch (action.type) {
+    case "MOVE": {
+      const currentNote = await DatabaseService.getNote(
+        action.prevWorkerId,
+        action.noteId,
+      );
+      if (currentNote) {
+        await DatabaseService.moveNote(
+          action.noteId,
+          action.prevWorkerId,
+          action.newWorkerId,
+          { ...currentNote, column: action.newCol, position: action.newPos },
+        );
+      }
+      break;
+    }
+    case "ADD":
+      await DatabaseService.addNote(
+        action.workerId,
+        action.noteId,
+        action.noteData,
+      );
+      break;
+    case "DELETE":
+      await DatabaseService.deleteNote(action.workerId, action.noteId);
+      break;
+    case "EDIT_TEXT":
+      await DatabaseService.updateNoteText(
+        action.workerId,
+        action.noteId,
+        action.newText,
+      );
+      break;
+    case "EDIT_COLOR":
+      await DatabaseService.updateNoteColor(
+        action.workerId,
+        action.noteId,
+        action.newColor,
+      );
+      break;
+  }
+});
+
+export const historyEffectAtom = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(historyListAtom, []);
+    set(pointerAtom, -1);
+  }
 });

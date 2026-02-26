@@ -1,25 +1,19 @@
-import type { HistoryAction } from "./types";
+import { useAtomValue, useSetAtom } from "jotai";
+import { canUndoAtom, canRedoAtom, undoAtom, redoAtom } from "./atoms";
 
-interface UndoRedoControlsProps {
-  history: HistoryAction[];
-  future: HistoryAction[];
-  onUndo: () => void;
-  onRedo: () => void;
-}
+export function UndoRedoControls() {
+  const canUndo = useAtomValue(canUndoAtom);
+  const canRedo = useAtomValue(canRedoAtom);
+  const onUndo = useSetAtom(undoAtom);
+  const onRedo = useSetAtom(redoAtom);
 
-export function UndoRedoControls({
-  history,
-  future,
-  onUndo,
-  onRedo,
-}: UndoRedoControlsProps) {
   return (
     <div className="flex justify-center gap-2">
       <button
         onClick={onUndo}
-        disabled={history.length === 0}
+        disabled={!canUndo}
         className={`p-2 rounded-lg transition-all border ${
-          history.length === 0
+          !canUndo
             ? "text-slate-300 border-transparent cursor-not-allowed"
             : "text-slate-600 border-slate-200 hover:bg-slate-100 hover:shadow-sm"
         }`}
@@ -42,9 +36,9 @@ export function UndoRedoControls({
       </button>
       <button
         onClick={onRedo}
-        disabled={future.length === 0}
+        disabled={!canRedo}
         className={`p-2 rounded-lg transition-all border ${
-          future.length === 0
+          !canRedo
             ? "text-slate-300 border-transparent cursor-not-allowed"
             : "text-slate-600 border-slate-200 hover:bg-slate-100 hover:shadow-sm"
         }`}

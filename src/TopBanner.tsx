@@ -1,23 +1,10 @@
-import type { HistoryAction } from "./types";
 import { UndoRedoControls } from "./UndoRedoControls";
 import { AvatarList } from "./AvatarList";
 import { SearchAndFilter } from "./SearchAndFilter";
 import { useSetAtom } from "jotai";
 import { appSettingsMenuPosAtom } from "./atoms";
 
-interface TopBannerProps {
-  history: HistoryAction[];
-  future: HistoryAction[];
-  onUndo: () => void;
-  onRedo: () => void;
-}
-
-export function TopBanner({
-  history,
-  future,
-  onUndo,
-  onRedo,
-}: TopBannerProps) {
+export function TopBanner() {
   const setAppSettingsMenuPos = useSetAtom(appSettingsMenuPosAtom);
 
   return (
@@ -33,12 +20,7 @@ export function TopBanner({
       </div>
 
       {/* Center: Undo/Redo */}
-      <UndoRedoControls
-        history={history}
-        future={future}
-        onUndo={onUndo}
-        onRedo={onRedo}
-      />
+      <UndoRedoControls />
 
       {/* Right: Buttons */}
       <div className="flex gap-3 items-center justify-end">

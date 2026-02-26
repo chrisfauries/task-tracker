@@ -1,27 +1,27 @@
 import React from "react";
-import { useSetAtom } from "jotai";
+import { useAtomValue, useSetAtom } from "jotai";
 import {
   isEditWorkerDialogOpenAtom,
   editingWorkerAtom,
   isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
+  workerNameFamily,
+  workerDefaultColorFamily,
 } from "./atoms";
 
 interface WorkerNameTagProps {
   workerId: string;
-  workerName: string;
-  defaultColor?: number;
 }
 
 export const WorkerNameTag: React.FC<WorkerNameTagProps> = ({
   workerId,
-  workerName,
-  defaultColor,
 }) => {
   const setIsEditWorkerDialogOpen = useSetAtom(isEditWorkerDialogOpenAtom);
   const setEditingWorker = useSetAtom(editingWorkerAtom);
   const setIsDeleteWorkerDialogOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
   const setWorkerToDelete = useSetAtom(workerToDeleteAtom);
+  const workerName = useAtomValue(workerNameFamily(workerId));
+  const defaultColor = useAtomValue(workerDefaultColorFamily(workerId));
 
   const handleEdit = () => {
     // Default to 0 (Green) if missing

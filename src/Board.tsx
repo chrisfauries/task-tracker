@@ -1,19 +1,10 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { useAtomValue } from "jotai";
 import { WorkerRow } from "./WorkerRow";
-import type {
-  HistoryAction,
-} from "./types";
 import { COLUMN_NAMES } from "./constants";
 import { workerIdsAtom, dragOriginAtom } from "./atoms";
 
-interface BoardProps {
-  onHistory: (action: HistoryAction) => void;
-}
-
-export function Board({
-  onHistory,
-}: BoardProps) {
+export function Board() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const autoScrollSpeed = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const animationFrameId = useRef<number | null>(null);
@@ -124,7 +115,6 @@ export function Board({
           <WorkerRow
             key={workerId}
             workerId={workerId}
-            onHistory={onHistory}
           />
         ))}
       </div>

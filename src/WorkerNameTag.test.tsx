@@ -7,6 +7,7 @@ import {
   editingWorkerAtom,
   isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
+  boardDataAtom,
 } from "./atoms";
 
 describe("WorkerNameTag", () => {
@@ -14,7 +15,6 @@ describe("WorkerNameTag", () => {
 
   const defaultProps = {
     workerId: "worker-1",
-    workerName: "John Doe",
   };
 
   beforeEach(() => {
@@ -24,6 +24,9 @@ describe("WorkerNameTag", () => {
     store.set(editingWorkerAtom, null);
     store.set(isDeleteWorkerDialogOpenAtom, false);
     store.set(workerToDeleteAtom, null);
+    store.set(boardDataAtom, {
+      "worker-1": { name: "John Doe", defaultColor: 0, notes: {} },
+    });
   });
 
   const renderComponent = (props = defaultProps) => {
@@ -41,7 +44,10 @@ describe("WorkerNameTag", () => {
 
   describe("Edit Logic (Double Click)", () => {
     it("opens the edit dialog and sets editing atom with the provided defaultColor", () => {
-      renderComponent({ ...defaultProps, defaultColor: 3 });
+      store.set(boardDataAtom, {
+        "worker-1": { name: "John Doe", defaultColor: 3, notes: {} },
+      });
+      renderComponent();
 
       // Find the main container using the title attribute
       const container = screen.getByTitle("Double click to edit name");
@@ -59,7 +65,10 @@ describe("WorkerNameTag", () => {
     });
 
     it("defaults color to 0 if defaultColor is not provided", () => {
-      renderComponent(); // Renders without defaultColor
+      store.set(boardDataAtom, {
+        "worker-1": { name: "John Doe", notes: {} },
+      });
+      renderComponent();
 
       const container = screen.getByTitle("Double click to edit name");
       fireEvent.doubleClick(container);

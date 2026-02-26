@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
+import { useSetAtom } from "jotai";
 import { DatabaseService } from "./DatabaseService";
 import { STYLE_MAP, getSolidColorClass } from "./constants";
-import type { HistoryAction } from "./types";
+import { registerHistoryAtom } from "./atoms";
 
 interface NoteMenuProps {
   id: string;
@@ -10,7 +11,6 @@ interface NoteMenuProps {
   isLockedByOther: boolean;
   onDelete: () => void;
   onActivity: () => void;
-  onHistory: (action: HistoryAction) => void;
   acquireLock: () => Promise<boolean>;
   releaseLock: () => void;
 }
@@ -22,12 +22,12 @@ export function NoteMenu({
   isLockedByOther,
   onDelete,
   onActivity,
-  onHistory,
   acquireLock,
   releaseLock,
 }: NoteMenuProps) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const onHistory = useSetAtom(registerHistoryAtom);
 
   const currentColor = color !== undefined ? color : 0;
 

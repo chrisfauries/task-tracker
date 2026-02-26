@@ -4,29 +4,30 @@ import { ref, set, push, remove, onValue, get } from "firebase/database";
 import { db } from "./firebase";
 import { BELL_SOUND_URL } from "./constants";
 import { StickyNote } from "./StickyNote";
-import type { Note, HistoryAction } from "./types";
-import { columnNotesListFamily, trackActivityAtom, dragOriginAtom } from "./atoms";
+import type { Note } from "./types";
+import {
+  columnNotesListFamily,
+  trackActivityAtom,
+  dragOriginAtom,
+  registerHistoryAtom,
+  workerDefaultColorFamily,
+} from "./atoms";
 
 interface DropZoneProps {
   workerId: string;
   colIndex: number;
-  defaultColor?: number;
-  onHistory: (action: HistoryAction) => void;
 }
 
-export function DropZone({
-  workerId,
-  colIndex,
-  defaultColor,
-  onHistory,
-}: DropZoneProps) {
+export function DropZone({ workerId, colIndex }: DropZoneProps) {
+  const defaultColor = useAtomValue(workerDefaultColorFamily(workerId));
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
   const onActivity = useSetAtom(trackActivityAtom);
+  const onHistory = useSetAtom(registerHistoryAtom);
   const [dragOrigin, setDragOrigin] = useAtom(dragOriginAtom);
-
-  // Subscribe only to the IDs & Positions array
-  const sortedNoteItems = useAtomValue(columnNotesListFamily(`${workerId}::${colIndex}`));
+  const sortedNoteItems = useAtomValue(
+    columnNotesListFamily({ workerId, colIndex }),
+  );
 
   useEffect(() => {
     // If drag operation ends everywhere, ensure we are not highlighted
@@ -43,7 +44,7 @@ export function DropZone({
     oldWorkerId: string,
     newPosition: number,
     oldCol: number,
-    oldPos: number
+    oldPos: number,
   ) => {
     if (isNaN(newPosition)) {
       console.error("Attempted to set NaN position");
@@ -82,7 +83,7 @@ export function DropZone({
           });
         }
       },
-      { onlyOnce: true }
+      { onlyOnce: true },
     );
   };
 
@@ -97,7 +98,7 @@ export function DropZone({
       onActivity();
 
       const snap = await get(
-        ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`)
+        ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`),
       );
       if (snap.exists()) {
         const noteData = snap.val();
@@ -194,7 +195,6 @@ export function DropZone({
             onDragEnd={() => setDragOrigin(null)}
             isNew={noteItem.id === autoEditId}
             onEditStarted={() => setAutoEditId(null)}
-            onHistory={onHistory}
           />
         ))}
 
@@ -216,14 +216,14 @@ export function DropZone({
             e.currentTarget.classList.add(
               "bg-red-100",
               "border-red-500",
-              "scale-[1.02]"
+              "scale-[1.02]",
             );
           }}
           onDragLeave={(e) =>
             e.currentTarget.classList.remove(
               "bg-red-100",
               "border-red-500",
-              "scale-[1.02]"
+              "scale-[1.02]",
             )
           }
           onDrop={handleTrashDrop}

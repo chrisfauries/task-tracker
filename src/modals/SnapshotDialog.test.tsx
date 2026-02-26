@@ -5,8 +5,6 @@ import { DatabaseService } from "../DatabaseService";
 import { Provider, createStore } from "jotai";
 import {
   isSnapshotDialogOpenAtom,
-  snapshotsAtom,
-  snapshotsLoadingAtom,
   _snapshotsStorageAtom,
 } from "../atoms";
 import type { SnapshotsData } from "../types";
