@@ -1,21 +1,20 @@
 import { useAtom, useSetAtom, useAtomValue } from "jotai";
-import { contextMenuPosAtom, isAddToCategoryDialogOpenAtom, isDueDateDialogOpenAtom, addToCategoryTargetAtom } from "./atoms";
+import { contextMenuPosAtom, openDialog, Dialog, addToCategoryTargetAtom } from "./atoms";
 
 export const ContextMenu = () => {
   const [position, setPosition] = useAtom(contextMenuPosAtom);
-  const setAddToCategoryDialogOpen = useSetAtom(isAddToCategoryDialogOpenAtom);
-  const setDueDateDialogOpen = useSetAtom(isDueDateDialogOpenAtom);
+  const open = useSetAtom(openDialog);
   const target = useAtomValue(addToCategoryTargetAtom);
 
   if (!position) return null;
 
   const handleOpenAddToCategory = () => {
-    setAddToCategoryDialogOpen(true);
+    open(Dialog.ADD_TO_CATEGORY);
     setPosition(null);
   };
 
   const handleOpenDueDate = () => {
-    setDueDateDialogOpen(true);
+    open(Dialog.DUE_DATE);
     setPosition(null);
   };
 

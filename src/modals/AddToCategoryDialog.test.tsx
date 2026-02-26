@@ -4,7 +4,9 @@ import { AddToCategoryDialog } from "./AddToCategoryDialog";
 import { DatabaseService } from "../DatabaseService";
 import { Provider, createStore } from "jotai";
 import {
-  isAddToCategoryDialogOpenAtom,
+  isDialogOpen,
+  openDialog,
+  Dialog,
   addToCategoryTargetAtom,
   categoriesAtom,
 } from "../atoms";
@@ -40,7 +42,7 @@ describe("AddToCategoryDialog", () => {
 
   beforeEach(() => {
     store = createStore();
-    store.set(isAddToCategoryDialogOpenAtom, true);
+    store.set(openDialog, Dialog.ADD_TO_CATEGORY);
     store.set(addToCategoryTargetAtom, mockTargetNote);
     store.set(categoriesAtom, mockCategories);
     vi.clearAllMocks();
@@ -55,7 +57,7 @@ describe("AddToCategoryDialog", () => {
   };
 
   it("renders nothing when closed", () => {
-    store.set(isAddToCategoryDialogOpenAtom, false);
+    store.set(openDialog, Dialog.NONE);
     renderDialog();
     expect(screen.queryByText("Add to Category...")).not.toBeInTheDocument();
   });
@@ -80,7 +82,7 @@ describe("AddToCategoryDialog", () => {
     fireEvent.click(closeBtn);
     
     await waitFor(() => {
-      expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.ADD_TO_CATEGORY))).toBe(false);
     });
   });
 
@@ -103,7 +105,7 @@ describe("AddToCategoryDialog", () => {
         items: ["Task 1", mockTargetNote.text],
       });
       // 3. Dialog closed
-      expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.ADD_TO_CATEGORY))).toBe(false);
     });
   });
 
@@ -152,7 +154,7 @@ describe("AddToCategoryDialog", () => {
         "Urgent",
         0
       );
-      expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.ADD_TO_CATEGORY))).toBe(false);
     });
   });
 

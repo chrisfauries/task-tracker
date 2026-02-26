@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ContextMenu } from "./ContextMenu";
 import { Provider, createStore } from "jotai";
-import { contextMenuPosAtom, isAddToCategoryDialogOpenAtom } from "./atoms";
+import { contextMenuPosAtom, isDialogOpen, Dialog } from "./atoms";
 
 describe("ContextMenu", () => {
   let store: ReturnType<typeof createStore>;
@@ -11,7 +11,6 @@ describe("ContextMenu", () => {
     store = createStore();
     // Default state: menu is closed (position null)
     store.set(contextMenuPosAtom, null);
-    store.set(isAddToCategoryDialogOpenAtom, false);
   });
 
   const renderContextMenu = () => {
@@ -52,7 +51,7 @@ describe("ContextMenu", () => {
     fireEvent.click(button);
 
     // 1. Should set dialog atom to true
-    expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(true);
+    expect(store.get(isDialogOpen(Dialog.ADD_TO_CATEGORY))).toBe(true);
     // 2. Should set position atom to null (close menu)
     expect(store.get(contextMenuPosAtom)).toBeNull();
   });

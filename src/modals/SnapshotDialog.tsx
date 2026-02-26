@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useSetAtom, useAtomValue } from "jotai";
 import {
-  isSnapshotDialogOpenAtom,
+  isDialogOpen,
+  closeDialog,
+  Dialog,
   snapshotsAtom,
   snapshotsLoadingAtom,
   snapshotsSyncEffect,
@@ -10,21 +12,21 @@ import { DatabaseService } from "../DatabaseService";
 import type { SavedSnapshot } from "../types";
 
 export function SnapshotDialog() {
-  if (!useAtomValue(isSnapshotDialogOpenAtom)) return null;
+  if (!useAtomValue(isDialogOpen(Dialog.SNAPSHOT))) return null;
 
   return <SnapshotDialogContent />;
 }
 
 function SnapshotDialogContent() {
   useAtomValue(snapshotsSyncEffect);
-  const setIsOpen = useSetAtom(isSnapshotDialogOpenAtom);
+  const close = useSetAtom(closeDialog);
   const sortedSnapshots = useAtomValue(snapshotsAtom);
   const loading = useAtomValue(snapshotsLoadingAtom);
 
   const [confirmRestoreId, setConfirmRestoreId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
-  const handleClose = () => setIsOpen(false);
+  const handleClose = () => close();
 
   const handleRestore = async (snap: SavedSnapshot) => {
     try {

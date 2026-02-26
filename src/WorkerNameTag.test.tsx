@@ -3,9 +3,10 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { WorkerNameTag } from "./WorkerNameTag";
 import {
-  isEditWorkerDialogOpenAtom,
+  isDialogOpen,
+  Dialog,
+  openDialog,
   editingWorkerAtom,
-  isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
   boardDataAtom,
 } from "./atoms";
@@ -20,9 +21,8 @@ describe("WorkerNameTag", () => {
   beforeEach(() => {
     store = createStore();
     // Initialize default states for the atoms
-    store.set(isEditWorkerDialogOpenAtom, false);
+    store.set(openDialog, Dialog.NONE);
     store.set(editingWorkerAtom, null);
-    store.set(isDeleteWorkerDialogOpenAtom, false);
     store.set(workerToDeleteAtom, null);
     store.set(boardDataAtom, {
       "worker-1": { name: "John Doe", defaultColor: 0, notes: {} },
@@ -54,7 +54,7 @@ describe("WorkerNameTag", () => {
       fireEvent.doubleClick(container);
 
       // Assert that the dialog open state was set to true
-      expect(store.get(isEditWorkerDialogOpenAtom)).toBe(true);
+      expect(store.get(isDialogOpen(Dialog.EDIT_WORKER))).toBe(true);
 
       // Assert that the payload was set correctly with the provided color
       expect(store.get(editingWorkerAtom)).toEqual({
@@ -91,7 +91,7 @@ describe("WorkerNameTag", () => {
       fireEvent.click(deleteButton);
 
       // Assert dialog open state
-      expect(store.get(isDeleteWorkerDialogOpenAtom)).toBe(true);
+      expect(store.get(isDialogOpen(Dialog.DELETE_WORKER))).toBe(true);
 
       // Assert payload
       expect(store.get(workerToDeleteAtom)).toEqual({
@@ -119,7 +119,7 @@ describe("WorkerNameTag", () => {
       expect(parentClickMock).not.toHaveBeenCalled();
       
       // Ensure the delete logic still ran
-      expect(store.get(isDeleteWorkerDialogOpenAtom)).toBe(true);
+      expect(store.get(isDialogOpen(Dialog.DELETE_WORKER))).toBe(true);
     });
   });
 });

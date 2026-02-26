@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { WorkerOrderDialog } from "./WorkerOrderDialog";
-import { isWorkerOrderDialogOpenAtom, boardDataAtom } from "../atoms";
+import { isDialogOpen, openDialog, Dialog, boardDataAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 
 vi.mock("../DatabaseService", () => ({
@@ -18,7 +18,7 @@ describe("WorkerOrderDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     store = createStore();
-    store.set(isWorkerOrderDialogOpenAtom, true);
+    store.set(openDialog, Dialog.WORKER_ORDER);
     
     // Setup initial board data
     // Mix of explicit positions and missing positions to verify sorting logic
@@ -63,7 +63,7 @@ describe("WorkerOrderDialog", () => {
     });
 
     // Validates the modal automatically closes upon success
-    expect(store.get(isWorkerOrderDialogOpenAtom)).toBe(false);
+    expect(store.get(isDialogOpen(Dialog.WORKER_ORDER))).toBe(false);
   });
 
   it("cancels properly without saving", () => {
@@ -72,6 +72,6 @@ describe("WorkerOrderDialog", () => {
     fireEvent.click(screen.getByText("Cancel"));
 
     expect(DatabaseService.updateWorkerPositions).not.toHaveBeenCalled();
-    expect(store.get(isWorkerOrderDialogOpenAtom)).toBe(false);
+    expect(store.get(isDialogOpen(Dialog.WORKER_ORDER))).toBe(false);
   });
 });

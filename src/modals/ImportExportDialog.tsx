@@ -1,12 +1,12 @@
 import React, { useState, useRef } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
-import { isImportExportDialogOpenAtom, categoriesAtom, customPaletteAtom, boardDataAtom } from "../atoms";
+import { isDialogOpen, closeDialog, Dialog, categoriesAtom, customPaletteAtom, boardDataAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 import type { BackupData } from "../types";
 import { DEFAULT_PALETTE_HEX } from "../atoms";
 
 export function ImportExportDialog() {
-  const isOpen = useAtomValue(isImportExportDialogOpenAtom);
+  const isOpen = useAtomValue(isDialogOpen(Dialog.IMPORT_EXPORT));
   
   if (!isOpen) return null;
 
@@ -14,7 +14,7 @@ export function ImportExportDialog() {
 }
 
 function ImportExportDialogContent() {
-  const setIsOpen = useSetAtom(isImportExportDialogOpenAtom);
+  const close = useSetAtom(closeDialog);
   const categories = useAtomValue(categoriesAtom);
   const customColors = useAtomValue(customPaletteAtom);
   const boardData = useAtomValue(boardDataAtom);
@@ -22,7 +22,7 @@ function ImportExportDialogContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [confirmingImport, setConfirmingImport] = useState<File | null>(null);
 
-  const handleClose = () => setIsOpen(false);
+  const handleClose = () => close();
 
   const handleExport = () => {
     const backup: BackupData = {
@@ -61,7 +61,7 @@ function ImportExportDialogContent() {
           json.categories || {},
           json.customColors || DEFAULT_PALETTE_HEX
         );
-        setIsOpen(false);
+        close();
         alert("Board restored successfully!");
       } catch (err) {
         console.error(err);

@@ -1,9 +1,9 @@
 import React from "react";
 import { useAtomValue, useSetAtom } from "jotai";
 import {
-  isEditWorkerDialogOpenAtom,
+  openDialog,
+  Dialog,
   editingWorkerAtom,
-  isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
   workerNameFamily,
   workerDefaultColorFamily,
@@ -16,9 +16,8 @@ interface WorkerNameTagProps {
 export const WorkerNameTag: React.FC<WorkerNameTagProps> = ({
   workerId,
 }) => {
-  const setIsEditWorkerDialogOpen = useSetAtom(isEditWorkerDialogOpenAtom);
+  const open = useSetAtom(openDialog);
   const setEditingWorker = useSetAtom(editingWorkerAtom);
-  const setIsDeleteWorkerDialogOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
   const setWorkerToDelete = useSetAtom(workerToDeleteAtom);
   const workerName = useAtomValue(workerNameFamily(workerId));
   const defaultColor = useAtomValue(workerDefaultColorFamily(workerId));
@@ -26,12 +25,12 @@ export const WorkerNameTag: React.FC<WorkerNameTagProps> = ({
   const handleEdit = () => {
     // Default to 0 (Green) if missing
     setEditingWorker({ id: workerId, name: workerName, color: defaultColor ?? 0 });
-    setIsEditWorkerDialogOpen(true);
+    open(Dialog.EDIT_WORKER);
   };
 
   const handleDelete = () => {
     setWorkerToDelete({ id: workerId, name: workerName });
-    setIsDeleteWorkerDialogOpen(true);
+    open(Dialog.DELETE_WORKER);
   };
 
   return (

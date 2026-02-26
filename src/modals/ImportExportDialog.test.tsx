@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { ImportExportDialog } from "./ImportExportDialog";
 import { DatabaseService } from "../DatabaseService";
-import { isImportExportDialogOpenAtom, categoriesAtom, boardDataAtom } from "../atoms";
+import { isDialogOpen, openDialog, Dialog, categoriesAtom, boardDataAtom } from "../atoms";
 import type { BoardData, CategoriesData } from "../types";
 
 // Mock DatabaseService
@@ -55,7 +55,7 @@ describe("ImportExportDialog", () => {
 
   beforeEach(() => {
     store = createStore();
-    store.set(isImportExportDialogOpenAtom, true);
+    store.set(openDialog, Dialog.IMPORT_EXPORT);
     store.set(categoriesAtom, mockCategories);
     store.set(boardDataAtom, mockBoardData);
     
@@ -80,7 +80,7 @@ describe("ImportExportDialog", () => {
   };
 
   it("renders nothing when closed", () => {
-    store.set(isImportExportDialogOpenAtom, false);
+    store.set(openDialog, Dialog.NONE);
     renderDialog();
     expect(screen.queryByText("Data Management")).not.toBeInTheDocument();
   });
@@ -98,7 +98,7 @@ describe("ImportExportDialog", () => {
     fireEvent.click(closeBtn);
 
     await waitFor(() => {
-      expect(store.get(isImportExportDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.IMPORT_EXPORT))).toBe(false);
     });
   });
 
@@ -233,7 +233,7 @@ describe("ImportExportDialog", () => {
                 DEFAULT_PALETTE // Expect the default palette as the 3rd arg
             );
             expect(mockAlert).toHaveBeenCalledWith("Board restored successfully!");
-            expect(store.get(isImportExportDialogOpenAtom)).toBe(false);
+            expect(store.get(isDialogOpen(Dialog.IMPORT_EXPORT))).toBe(false);
         });
     });
 
@@ -255,7 +255,7 @@ describe("ImportExportDialog", () => {
             expect(mockConsoleError).toHaveBeenCalled();
             expect(DatabaseService.restoreBackup).not.toHaveBeenCalled();
             // Should stay open to allow retry
-            expect(store.get(isImportExportDialogOpenAtom)).toBe(true);
+            expect(store.get(isDialogOpen(Dialog.IMPORT_EXPORT))).toBe(true);
         });
     });
 

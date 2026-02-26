@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { useAtom, useAtomValue } from "jotai";
-import { isDueDateDialogOpenAtom, addToCategoryTargetAtom } from "../atoms";
+import { useAtomValue, useSetAtom } from "jotai";
+import { isDialogOpen, closeDialog, Dialog, addToCategoryTargetAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 
 const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -10,7 +10,8 @@ const MONTH_NAMES = [
 ];
 
 export function DueDateDialog() {
-  const [isOpen, setIsOpen] = useAtom(isDueDateDialogOpenAtom);
+  const isOpen = useAtomValue(isDialogOpen(Dialog.DUE_DATE));
+  const close = useSetAtom(closeDialog);
   const target = useAtomValue(addToCategoryTargetAtom);
 
   // Initialize with the current due date (if any) or Today
@@ -34,20 +35,20 @@ export function DueDateDialog() {
 
   if (!isOpen || !target) return null;
 
-  const handleClose = () => setIsOpen(false);
+  const handleClose = () => close();
 
   const handleSave = async () => {
     if (target) {
       await DatabaseService.updateNoteDueDate(target.workerId, target.id, selectedDateStr);
     }
-    setIsOpen(false);
+    close();
   };
 
   const handleClear = async () => {
     if (target) {
       await DatabaseService.updateNoteDueDate(target.workerId, target.id, null);
     }
-    setIsOpen(false);
+    close();
   };
 
   // Calendar Helpers

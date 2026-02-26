@@ -8,10 +8,10 @@ import {
 } from "./WorkerModals";
 import { DatabaseService } from "../DatabaseService";
 import {
-  isAddWorkerDialogOpenAtom,
-  isEditWorkerDialogOpenAtom,
+  isDialogOpen,
+  openDialog,
+  Dialog,
   editingWorkerAtom,
-  isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
 } from "../atoms";
 
@@ -48,13 +48,13 @@ describe("WorkerModals", () => {
     };
 
     it("renders nothing when closed", () => {
-      store.set(isAddWorkerDialogOpenAtom, false);
+      store.set(openDialog, Dialog.NONE);
       renderDialog();
       expect(screen.queryByText("Add New Worker")).not.toBeInTheDocument();
     });
 
     it("renders correctly when open", () => {
-      store.set(isAddWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.ADD_WORKER);
       renderDialog();
       expect(screen.getByText("Add New Worker")).toBeInTheDocument();
       expect(
@@ -63,7 +63,7 @@ describe("WorkerModals", () => {
     });
 
     it("submits a new worker with default color", async () => {
-      store.set(isAddWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.ADD_WORKER);
       renderDialog();
 
       const input = screen.getByPlaceholderText("Worker or Student Name");
@@ -77,12 +77,12 @@ describe("WorkerModals", () => {
           "John Doe",
           0 // Expect default color index 0 (Green)
         );
-        expect(store.get(isAddWorkerDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.ADD_WORKER))).toBe(false);
       });
     });
 
     it("submits a new worker with selected color", async () => {
-      store.set(isAddWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.ADD_WORKER);
       renderDialog();
 
       fireEvent.change(screen.getByPlaceholderText("Worker or Student Name"), {
@@ -106,18 +106,18 @@ describe("WorkerModals", () => {
         const args = (DatabaseService.createWorker as any).mock.calls[0];
         expect(args[0]).toBe("Blue Worker");
         expect(args[1]).toBe(1); // Expect index 1 (Blue)
-        expect(store.get(isAddWorkerDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.ADD_WORKER))).toBe(false);
       });
     });
 
     it("closes when Cancel is clicked", async () => {
-      store.set(isAddWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.ADD_WORKER);
       renderDialog();
 
       fireEvent.click(screen.getByText("Cancel"));
 
       await waitFor(() => {
-        expect(store.get(isAddWorkerDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.ADD_WORKER))).toBe(false);
         expect(DatabaseService.createWorker).not.toHaveBeenCalled();
       });
     });
@@ -135,20 +135,20 @@ describe("WorkerModals", () => {
     };
 
     it("renders nothing when closed", () => {
-      store.set(isEditWorkerDialogOpenAtom, false);
+      store.set(openDialog, Dialog.NONE);
       renderDialog();
       expect(screen.queryByText("Edit Worker Name")).not.toBeInTheDocument();
     });
 
     it("renders nothing when open but no worker selected", () => {
-      store.set(isEditWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.EDIT_WORKER);
       store.set(editingWorkerAtom, null);
       renderDialog();
       expect(screen.queryByText("Edit Worker Name")).not.toBeInTheDocument();
     });
 
     it("pre-fills data and updates worker on save", async () => {
-      store.set(isEditWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.EDIT_WORKER);
       store.set(editingWorkerAtom, mockWorker);
       renderDialog();
 
@@ -165,20 +165,20 @@ describe("WorkerModals", () => {
           name: "New Name",
           defaultColor: 1, // Expect preserved color 1
         });
-        expect(store.get(isEditWorkerDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.EDIT_WORKER))).toBe(false);
         expect(store.get(editingWorkerAtom)).toBe(null);
       });
     });
 
     it("closes and clears state on Cancel", async () => {
-      store.set(isEditWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.EDIT_WORKER);
       store.set(editingWorkerAtom, mockWorker);
       renderDialog();
 
       fireEvent.click(screen.getByText("Cancel"));
 
       await waitFor(() => {
-        expect(store.get(isEditWorkerDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.EDIT_WORKER))).toBe(false);
         expect(store.get(editingWorkerAtom)).toBe(null);
         expect(DatabaseService.updateWorker).not.toHaveBeenCalled();
       });
@@ -197,13 +197,13 @@ describe("WorkerModals", () => {
     };
 
     it("renders nothing when closed", () => {
-      store.set(isDeleteWorkerDialogOpenAtom, false);
+      store.set(openDialog, Dialog.NONE);
       renderDialog();
       expect(screen.queryByText("Delete Row?")).not.toBeInTheDocument();
     });
 
     it("displays the correct worker name", () => {
-      store.set(isDeleteWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.DELETE_WORKER);
       store.set(workerToDeleteAtom, mockWorker);
       renderDialog();
 
@@ -212,7 +212,7 @@ describe("WorkerModals", () => {
     });
 
     it("calls deleteWorker and closes on confirm", async () => {
-      store.set(isDeleteWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.DELETE_WORKER);
       store.set(workerToDeleteAtom, mockWorker);
       renderDialog();
 
@@ -220,20 +220,20 @@ describe("WorkerModals", () => {
 
       await waitFor(() => {
         expect(DatabaseService.deleteWorker).toHaveBeenCalledWith("w99");
-        expect(store.get(isDeleteWorkerDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.DELETE_WORKER))).toBe(false);
         expect(store.get(workerToDeleteAtom)).toBe(null);
       });
     });
 
     it("closes and keeps row on cancel", async () => {
-      store.set(isDeleteWorkerDialogOpenAtom, true);
+      store.set(openDialog, Dialog.DELETE_WORKER);
       store.set(workerToDeleteAtom, mockWorker);
       renderDialog();
 
       fireEvent.click(screen.getByText("Keep Row"));
 
       await waitFor(() => {
-        expect(store.get(isDeleteWorkerDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.DELETE_WORKER))).toBe(false);
         expect(store.get(workerToDeleteAtom)).toBe(null);
         expect(DatabaseService.deleteWorker).not.toHaveBeenCalled();
       });

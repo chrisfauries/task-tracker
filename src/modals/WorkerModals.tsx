@@ -3,21 +3,21 @@ import { useAtom, useAtomValue, useSetAtom } from "jotai";
 import { STYLE_MAP, getSolidColorClass } from "../constants";
 import { DatabaseService } from "../DatabaseService";
 import {
-  isAddWorkerDialogOpenAtom,
-  isEditWorkerDialogOpenAtom,
+  isDialogOpen,
+  closeDialog,
+  Dialog,
   editingWorkerAtom,
-  isDeleteWorkerDialogOpenAtom,
   workerToDeleteAtom,
 } from "../atoms";
 
 export function AddWorkerDialog() {
-  if(!useAtomValue(isAddWorkerDialogOpenAtom)) return null;
+  if(!useAtomValue(isDialogOpen(Dialog.ADD_WORKER))) return null;
 
   return <AddWorkerDialogContent />;
 }
 
  function AddWorkerDialogContent() {
-  const  setIsOpen = useSetAtom(isAddWorkerDialogOpenAtom);
+  const  close = useSetAtom(closeDialog);
   const [name, setName] = useState("");
   const [color, setColor] = useState(0);
 
@@ -26,7 +26,7 @@ export function AddWorkerDialog() {
     if (!name.trim()) return;
 
     await DatabaseService.createWorker(name, color);
-    setIsOpen(false);
+    close();
   };
 
   return (
@@ -68,7 +68,7 @@ export function AddWorkerDialog() {
           <div className="flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => setIsOpen(false)}
+              onClick={() => close()}
               className="px-4 py-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition"
             >
               Cancel
@@ -87,7 +87,7 @@ export function AddWorkerDialog() {
 }
 
 export function EditWorkerDialog() {
- const isOpen = useAtomValue(isEditWorkerDialogOpenAtom);
+ const isOpen = useAtomValue(isDialogOpen(Dialog.EDIT_WORKER));
   const editingWorker = useAtomValue(editingWorkerAtom);
   
   if(!isOpen || !editingWorker) return null;
@@ -95,7 +95,7 @@ export function EditWorkerDialog() {
 }
 
  function EditWorkerDialogContent() {
-  const  setIsOpen = useSetAtom(isEditWorkerDialogOpenAtom);
+  const  close = useSetAtom(closeDialog);
   const [editingWorker, setEditingWorker] = useAtom(editingWorkerAtom);
 
   const [name, setName] = useState(editingWorker?.name || "");
@@ -110,12 +110,12 @@ export function EditWorkerDialog() {
       defaultColor: color,
     });
 
-    setIsOpen(false);
+    close();
     setEditingWorker(null);
   };
 
   const handleClose = () => {
-    setIsOpen(false);
+    close();
     setEditingWorker(null);
   };
 
@@ -177,25 +177,25 @@ export function EditWorkerDialog() {
 }
 
 export function DeleteWorkerDialog() {
-  if(!useAtomValue(isDeleteWorkerDialogOpenAtom)) return null;
+  if(!useAtomValue(isDialogOpen(Dialog.DELETE_WORKER))) return null;
 
   return <DeleteWorkerDialogContent />;
 }
 
 function DeleteWorkerDialogContent() {
-  const  setIsOpen = useSetAtom(isDeleteWorkerDialogOpenAtom);
+  const  close = useSetAtom(closeDialog);
   const [workerToDelete, setWorkerToDelete] = useAtom(workerToDeleteAtom);
 
   const handleConfirm = async () => {
     if (workerToDelete) {
       await DatabaseService.deleteWorker(workerToDelete.id);
-      setIsOpen(false);
+      close();
       setWorkerToDelete(null);
     }
   };
 
   const handleClose = () => {
-    setIsOpen(false);
+    close();
     setWorkerToDelete(null);
   };
 

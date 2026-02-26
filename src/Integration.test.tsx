@@ -7,11 +7,12 @@ import { StickyNote } from "./StickyNote";
 import { SearchAndFilter } from "./SearchAndFilter";
 import { 
   contextMenuPosAtom, 
-  isAddToCategoryDialogOpenAtom, 
   categoriesAtom, 
   searchQueryAtom, 
   selectedCategoriesAtom,
-  boardDataAtom
+  boardDataAtom,
+  isDialogOpen,
+  Dialog
 } from "./atoms";
 import type { CategoriesData, BoardData } from "./types";
 
@@ -43,7 +44,6 @@ describe("Integration: EventBoundary & ContextMenu", () => {
   beforeEach(() => {
     store = createStore();
     store.set(contextMenuPosAtom, { x: 50, y: 50 });
-    store.set(isAddToCategoryDialogOpenAtom, false);
   });
 
   const renderApp = () => {
@@ -105,10 +105,10 @@ describe("Integration: EventBoundary & ContextMenu", () => {
     fireEvent(menuButton, event);
 
     // The button handler specifically:
-    // 1. Sets isAddToCategoryDialogOpenAtom = true
+    // 1. Sets openDialog(Dialog.ADD_TO_CATEGORY)
     // 2. Sets contextMenuPosAtom = null (closes menu manually)
     
-    expect(store.get(isAddToCategoryDialogOpenAtom)).toBe(true);
+    expect(store.get(isDialogOpen(Dialog.ADD_TO_CATEGORY))).toBe(true);
     expect(store.get(contextMenuPosAtom)).toBeNull();
   });
 });

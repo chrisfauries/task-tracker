@@ -1,13 +1,9 @@
 import { useAtom, useSetAtom } from "jotai";
 import {
   appSettingsMenuPosAtom,
-  isSnapshotDialogOpenAtom,
-  isCategoryManagementDialogOpenAtom,
-  isCustomColorsDialogOpenAtom,
-  isImportExportDialogOpenAtom,
-  isAddWorkerDialogOpenAtom,
+  openDialog,
+  Dialog,
   darkModeAtom,
-  isWorkerOrderDialogOpenAtom,
   logoutAtom,
 } from "./atoms";
 
@@ -15,14 +11,7 @@ import {
 export const AppSettingsMenu = () => {
   const logout = useSetAtom(logoutAtom);
   const [position, setPosition] = useAtom(appSettingsMenuPosAtom);
-  const setIsSnapshotOpen = useSetAtom(isSnapshotDialogOpenAtom);
-  const setIsCategoryDialogOpen = useSetAtom(
-    isCategoryManagementDialogOpenAtom
-  );
-  const setIsCustomColorsDialogOpen = useSetAtom(isCustomColorsDialogOpenAtom);
-  const setIsImportExportDialogOpen = useSetAtom(isImportExportDialogOpenAtom);
-  const setIsAddWorkerDialogOpen = useSetAtom(isAddWorkerDialogOpenAtom);
-  const setIsWorkerOrderDialogOpen = useSetAtom(isWorkerOrderDialogOpenAtom);
+  const open = useSetAtom(openDialog);
   const [darkMode, setDarkMode] = useAtom(darkModeAtom);
 
   if (!position) return null;
@@ -77,25 +66,25 @@ export const AppSettingsMenu = () => {
         <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
 
         <button
-          onClick={() => handleAction(() => setIsCategoryDialogOpen(true))}
+          onClick={() => handleAction(() => open(Dialog.CATEGORY_MANAGEMENT))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           Manage Categories
         </button>
         <button
-          onClick={() => handleAction(() => setIsCustomColorsDialogOpen(true))}
+          onClick={() => handleAction(() => open(Dialog.CUSTOM_COLORS))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           Customize Colors
         </button>
         <button
-          onClick={() => handleAction(() => setIsSnapshotOpen(true))}
+          onClick={() => handleAction(() => open(Dialog.SNAPSHOT))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200 flex items-center gap-2"
         >
           Snapshots
         </button>
         <button
-          onClick={() => handleAction(() => setIsImportExportDialogOpen(true))}
+          onClick={() => handleAction(() => open(Dialog.IMPORT_EXPORT))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           Import/Export
@@ -104,13 +93,13 @@ export const AppSettingsMenu = () => {
         <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
 
         <button
-          onClick={() => handleAction(() => setIsAddWorkerDialogOpen(true))}
+          onClick={() => handleAction(() => open(Dialog.ADD_WORKER))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-emerald-600 dark:text-emerald-400"
         >
           Add Worker
         </button>
         <button
-          onClick={() => handleAction(() => setIsWorkerOrderDialogOpen(true))}
+          onClick={() => handleAction(() => open(Dialog.WORKER_ORDER))}
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           Manage Worker Order

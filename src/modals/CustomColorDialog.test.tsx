@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { CustomColorsDialog } from "./CustomColorDialog";
 import { DatabaseService } from "../DatabaseService";
-import { isCustomColorsDialogOpenAtom, customPaletteAtom } from "../atoms";
+import { isDialogOpen, openDialog, Dialog, customPaletteAtom } from "../atoms";
 
 // Mock DatabaseService
 vi.mock("../DatabaseService", () => ({
@@ -29,7 +29,7 @@ describe("CustomColorsDialog", () => {
 
   beforeEach(() => {
     store = createStore();
-    store.set(isCustomColorsDialogOpenAtom, true);
+    store.set(openDialog, Dialog.CUSTOM_COLORS);
     store.set(customPaletteAtom, DEFAULT_PALETTE);
     vi.clearAllMocks();
   });
@@ -47,7 +47,7 @@ describe("CustomColorsDialog", () => {
   };
 
   it("renders nothing when closed", () => {
-    store.set(isCustomColorsDialogOpenAtom, false);
+    store.set(openDialog, Dialog.NONE);
     renderDialog();
     expect(screen.queryByText("Customize Color Palette")).not.toBeInTheDocument();
   });
@@ -66,7 +66,7 @@ describe("CustomColorsDialog", () => {
     fireEvent.click(closeBtn);
 
     await waitFor(() => {
-      expect(store.get(isCustomColorsDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.CUSTOM_COLORS))).toBe(false);
     });
   });
 
@@ -76,7 +76,7 @@ describe("CustomColorsDialog", () => {
     fireEvent.click(cancelBtn);
 
     await waitFor(() => {
-      expect(store.get(isCustomColorsDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.CUSTOM_COLORS))).toBe(false);
     });
   });
 
@@ -138,7 +138,7 @@ describe("CustomColorsDialog", () => {
       expect(DatabaseService.saveCustomPalette).toHaveBeenCalledWith(
         expect.arrayContaining(["#3B82F6", "#EAB308"])
       );
-      expect(store.get(isCustomColorsDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.CUSTOM_COLORS))).toBe(false);
     });
   });
 });

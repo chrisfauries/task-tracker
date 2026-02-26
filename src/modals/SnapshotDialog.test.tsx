@@ -4,7 +4,9 @@ import { SnapshotDialog } from "./SnapshotDialog";
 import { DatabaseService } from "../DatabaseService";
 import { Provider, createStore } from "jotai";
 import {
-  isSnapshotDialogOpenAtom,
+  isDialogOpen,
+  openDialog,
+  Dialog,
   _snapshotsStorageAtom,
 } from "../atoms";
 import type { SnapshotsData } from "../types";
@@ -57,7 +59,7 @@ describe("SnapshotDialog", () => {
     vi.clearAllMocks();
     store = createStore();
     // Default: Open, Loaded, Data present
-    store.set(isSnapshotDialogOpenAtom, true);
+    store.set(openDialog, Dialog.SNAPSHOT);
     // Mock subscription to return data immediately
     vi.mocked(DatabaseService.subscribeToSnapshots).mockImplementation((cb) => {
       cb(mockSnapshots);
@@ -74,7 +76,7 @@ describe("SnapshotDialog", () => {
   };
 
   it("renders nothing when closed", () => {
-    store.set(isSnapshotDialogOpenAtom, false);
+    store.set(openDialog, Dialog.NONE);
     renderDialog();
     expect(screen.queryByText("Version History")).not.toBeInTheDocument();
   });
@@ -115,7 +117,7 @@ describe("SnapshotDialog", () => {
     fireEvent.click(screen.getByText("✕"));
 
     await waitFor(() => {
-      expect(store.get(isSnapshotDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.SNAPSHOT))).toBe(false);
     });
   });
 
@@ -138,7 +140,7 @@ describe("SnapshotDialog", () => {
       await waitFor(() => {
         expect(DatabaseService.restoreBackup).toHaveBeenCalledWith({}, {}, []);
         expect(mockAlert).toHaveBeenCalledWith("Board restored successfully!");
-        expect(store.get(isSnapshotDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.SNAPSHOT))).toBe(false);
       });
     });
 

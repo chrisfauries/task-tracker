@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { Provider, createStore } from "jotai";
 import { CategoryManagementDialog } from "./CategoryManagementDialog";
 import { DatabaseService } from "../DatabaseService";
-import { isCategoryManagementDialogOpenAtom, categoriesAtom, boardDataAtom } from "../atoms";
+import { isDialogOpen, openDialog, Dialog, categoriesAtom, boardDataAtom } from "../atoms";
 import type { CategoriesData, BoardData } from "../types";
 
 // --- Mocks ---
@@ -62,7 +62,7 @@ describe("CategoryManagementDialog", () => {
     vi.clearAllMocks();
     store = createStore();
     // Default state: Open with data
-    store.set(isCategoryManagementDialogOpenAtom, true);
+    store.set(openDialog, Dialog.CATEGORY_MANAGEMENT);
     store.set(categoriesAtom, mockCategories);
     store.set(boardDataAtom, mockBoardData);
   });
@@ -83,7 +83,7 @@ describe("CategoryManagementDialog", () => {
 
   describe("Visibility & Rendering", () => {
     it("renders nothing when closed", () => {
-      store.set(isCategoryManagementDialogOpenAtom, false);
+      store.set(openDialog, Dialog.NONE);
       renderDialog();
       expect(screen.queryByText("Category Sets")).not.toBeInTheDocument();
     });
@@ -105,7 +105,7 @@ describe("CategoryManagementDialog", () => {
       fireEvent.click(closeBtn);
 
       await waitFor(() => {
-        expect(store.get(isCategoryManagementDialogOpenAtom)).toBe(false);
+        expect(store.get(isDialogOpen(Dialog.CATEGORY_MANAGEMENT))).toBe(false);
       });
     });
   });

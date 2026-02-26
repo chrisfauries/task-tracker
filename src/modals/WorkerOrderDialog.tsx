@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useAtom, useAtomValue } from "jotai";
-import { isWorkerOrderDialogOpenAtom, boardDataAtom } from "../atoms";
+import { useAtomValue, useSetAtom } from "jotai";
+import { isDialogOpen, closeDialog, Dialog, boardDataAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 import { Button } from "../Button";
 
 export function WorkerOrderDialog() {
-  const [isOpen, setIsOpen] = useAtom(isWorkerOrderDialogOpenAtom);
+  const isOpen = useAtomValue(isDialogOpen(Dialog.WORKER_ORDER));
+  const close = useSetAtom(closeDialog);
   const boardData = useAtomValue(boardDataAtom);
   const [workers, setWorkers] = useState<{ id: string; name: string }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +117,7 @@ export function WorkerOrderDialog() {
     await DatabaseService.updateWorkerPositions(updates);
     
     setIsSaving(false);
-    setIsOpen(false);
+    close();
   };
 
   return (
@@ -126,7 +127,7 @@ export function WorkerOrderDialog() {
           <h2 className="text-lg font-bold text-slate-800 dark:text-slate-100">
             Manage Worker Order
           </h2>
-          <button onClick={() => setIsOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
+          <button onClick={() => close()} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors">
             ✕
           </button>
         </div>
@@ -180,7 +181,7 @@ export function WorkerOrderDialog() {
         </div>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-2 bg-slate-50 dark:bg-slate-800/50">
-          <Button variant="neutral" onClick={() => setIsOpen(false)}>Cancel</Button>
+          <Button variant="neutral" onClick={() => close()}>Cancel</Button>
           <Button variant="primary" onClick={handleSave} disabled={isSaving}>
              {isSaving ? "Saving..." : "Save Order"}
           </Button>

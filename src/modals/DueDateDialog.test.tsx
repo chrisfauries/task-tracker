@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DueDateDialog } from "./DueDateDialog";
 import { DatabaseService } from "../DatabaseService";
 import { Provider, createStore } from "jotai";
-import { isDueDateDialogOpenAtom, addToCategoryTargetAtom } from "../atoms";
+import { isDialogOpen, openDialog, Dialog, addToCategoryTargetAtom } from "../atoms";
 import type { AddToCategoryTarget } from "../types";
 
 // Mock DatabaseService
@@ -31,7 +31,7 @@ describe("DueDateDialog", () => {
 
   beforeEach(() => {
     store = createStore();
-    store.set(isDueDateDialogOpenAtom, true);
+    store.set(openDialog, Dialog.DUE_DATE);
     store.set(addToCategoryTargetAtom, mockTarget);
 
     vi.clearAllMocks();
@@ -54,7 +54,7 @@ describe("DueDateDialog", () => {
   };
 
   it("renders nothing when closed", () => {
-    store.set(isDueDateDialogOpenAtom, false);
+    store.set(openDialog, Dialog.NONE);
     renderDialog();
     expect(screen.queryByText("Set Due Date")).not.toBeInTheDocument();
   });
@@ -139,7 +139,7 @@ describe("DueDateDialog", () => {
 
     // Verify dialog closed in store
     await waitFor(() => {
-      expect(store.get(isDueDateDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.DUE_DATE))).toBe(false);
     });
   });
 
@@ -156,7 +156,7 @@ describe("DueDateDialog", () => {
     );
 
     await waitFor(() => {
-      expect(store.get(isDueDateDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.DUE_DATE))).toBe(false);
     });
   });
 
@@ -166,7 +166,7 @@ describe("DueDateDialog", () => {
     fireEvent.click(screen.getByText("✕"));
 
     expect(DatabaseService.updateNoteDueDate).not.toHaveBeenCalled();
-    expect(store.get(isDueDateDialogOpenAtom)).toBe(false);
+    expect(store.get(isDialogOpen(Dialog.DUE_DATE))).toBe(false);
   });
 
   it("handles 'Set Date' with no selection (implicitly setting null)", async () => {
@@ -184,7 +184,7 @@ describe("DueDateDialog", () => {
     );
     
     await waitFor(() => {
-      expect(store.get(isDueDateDialogOpenAtom)).toBe(false);
+      expect(store.get(isDialogOpen(Dialog.DUE_DATE))).toBe(false);
     });
   });
 });

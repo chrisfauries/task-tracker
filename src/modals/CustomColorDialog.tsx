@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { useAtomValue, useSetAtom, useAtom } from "jotai";
-import { customPaletteAtom, isCustomColorsDialogOpenAtom, DEFAULT_PALETTE_HEX } from "../atoms";
+import { customPaletteAtom, isDialogOpen, closeDialog, Dialog, DEFAULT_PALETTE_HEX } from "../atoms";
 
 export function CustomColorsDialog() {
-  const isOpen = useAtomValue(isCustomColorsDialogOpenAtom);
+  const isOpen = useAtomValue(isDialogOpen(Dialog.CUSTOM_COLORS));
 
   if (!isOpen) return null;
 
@@ -14,12 +14,12 @@ export function CustomColorsDialog() {
 const SLOT_NAMES = ["One", "Two", "Three", "Four", "Five", "Six", "Seven"];
 
 function CustomColorsDialogContent() {
-  const setIsOpen = useSetAtom(isCustomColorsDialogOpenAtom);
+  const close = useSetAtom(closeDialog);
   const [currentPalette, setCustomPalette] = useAtom(customPaletteAtom);
   const [localColors, setLocalColors] = useState<string[]>(currentPalette);
   const [selectedIndex, setSelectedIndex] = useState<number>(0);
 
-  const handleClose = () => setIsOpen(false);
+  const handleClose = () => close();
 
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColors = [...localColors];

@@ -4,17 +4,19 @@ import {  STYLE_MAP, getSolidColorClass } from "../constants";
 import { DatabaseService } from "../DatabaseService";
 import {
   categoriesAtom,
-  isAddToCategoryDialogOpenAtom,
-  addToCategoryTargetAtom,
+  Dialog,
+  closeDialog,
+  isDialogOpen,
+  addToCategoryTargetAtom
 } from "../atoms";
 
 export function AddToCategoryDialog() {
-  if (!useAtomValue(isAddToCategoryDialogOpenAtom)) return null;
+  if (!useAtomValue(isDialogOpen(Dialog.ADD_TO_CATEGORY))) return null;
   return <AddToCategoryDialogContent />;
 }
 
 function AddToCategoryDialogContent() {
-  const setIsOpen = useSetAtom(isAddToCategoryDialogOpenAtom);
+  const close = useSetAtom(closeDialog);
   const categories = useAtomValue(categoriesAtom);
   const [targetNote, setTargetNote] = useAtom(addToCategoryTargetAtom);
 
@@ -51,7 +53,7 @@ function AddToCategoryDialogContent() {
       await DatabaseService.updateCategory(catId, { items: newItems });
 
       // 3. Close dialog and reset target
-      setIsOpen(false);
+      close();
       setTargetNote(null);
     } catch (error) {
       console.error("Failed to assign category:", error);
@@ -87,7 +89,7 @@ function AddToCategoryDialogContent() {
             Add to Category...
           </h2>
           <button
-            onClick={() => setIsOpen(false)}
+            onClick={close}
             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl"
           >
             ✕

@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import { useAtomValue, useSetAtom } from "jotai";
 import { DatabaseService } from "../DatabaseService";
 import { STYLE_MAP, getSolidColorClass } from "../constants";
-import { isCategoryManagementDialogOpenAtom, categoriesAtom, boardDataAtom, applyCategoryAtom } from "../atoms";
+import { isDialogOpen, closeDialog, Dialog, categoriesAtom, boardDataAtom, applyCategoryAtom } from "../atoms";
 import type { CategoriesData, BoardData } from "../types";
 
 export function CategoryManagementDialog() {
-  const isOpen = useAtomValue(isCategoryManagementDialogOpenAtom);
+  const isOpen = useAtomValue(isDialogOpen(Dialog.CATEGORY_MANAGEMENT));
   
   if (!isOpen) return null;
 
@@ -14,7 +14,7 @@ export function CategoryManagementDialog() {
 }
 
 function CategoryManagementDialogContent() {
-  const setIsOpen = useSetAtom(isCategoryManagementDialogOpenAtom);
+  const close = useSetAtom(closeDialog);
   const categories = useAtomValue(categoriesAtom);
   const boardData = useAtomValue(boardDataAtom);
   const applyCategory = useSetAtom(applyCategoryAtom);
@@ -22,7 +22,7 @@ function CategoryManagementDialogContent() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  const handleClose = () => setIsOpen(false);
+  const handleClose = () => close();
 
   const handleCreate = async (name: string) => {
     if (!name.trim()) return;
