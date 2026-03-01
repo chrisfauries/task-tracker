@@ -66,7 +66,7 @@ export class DatabaseService {
 
   static async updatePersonalWorkerPositions(
     userId: string,
-    updates: Record<string, number>,
+    updates: Record<string, number | null>,
   ): Promise<void> {
     await update(ref(db, `users/${userId}/workerPositions`), updates);
   }
@@ -112,7 +112,6 @@ export class DatabaseService {
     const q = query(
       ref(db, "snapshots"),
       orderByChild("timestamp"),
-      limitToLast(50),
     );
     return onValue(q, (snap) => callback(snap.val() || {}));
   }
@@ -330,24 +329,7 @@ export class DatabaseService {
     const snapRef = ref(db, "snapshots");
 
     // Prune old snapshots
-    try {
-      const snapshot = await get(query(snapRef, orderByChild("timestamp")));
-      if (snapshot.exists()) {
-        const data = snapshot.val() as SnapshotsData;
-        const entries = Object.entries(data).sort(
-          (a, b) => a[1].timestamp - b[1].timestamp,
-        );
-        if (entries.length >= 100) {
-          const updates: Record<string, null> = {};
-          entries
-            .slice(0, entries.length - 99)
-            .forEach(([key]) => (updates[key] = null));
-          await update(snapRef, updates);
-        }
-      }
-    } catch (e) {
-      console.error("Error pruning snapshots", e);
-    }
+    await this.pruneSnapshots(49);
 
     const newSnap: SavedSnapshot = {
       title: reason,
@@ -358,6 +340,28 @@ export class DatabaseService {
       creatorId: user.uid,
     };
     await push(snapRef, newSnap);
+  }
+
+    static async pruneSnapshots(maxCount: number): Promise<void> {
+    const snapRef = ref(db, "snapshots");
+    try {
+      const snapshot = await get(snapRef);
+      if (snapshot.exists()) {
+        const data = snapshot.val() as SnapshotsData;
+        const entries = Object.entries(data).sort(
+          (a, b) => a[1].timestamp - b[1].timestamp,
+        );
+        if (entries.length > maxCount) {
+          const updates: Record<string, null> = {};
+          entries
+            .slice(0, entries.length - maxCount)
+            .forEach(([key]) => (updates[key] = null));
+          await update(snapRef, updates);
+        }
+      }
+    } catch (e) {
+      console.error("Error pruning snapshots", e);
+    }
   }
 
   static async deleteSnapshot(snapshotId: string): Promise<void> {

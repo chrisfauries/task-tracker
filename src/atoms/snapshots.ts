@@ -25,6 +25,15 @@ export const snapshotsSyncEffect = atomEffect((get, set) => {
   return () => unsubscribe();
 });
 
+export const snapshotsCleanupEffect = atomEffect((get) => {
+  const user = get(userAtom);
+  const snapshots = get(_snapshotsStorageAtom);
+  if (!user || !snapshots) return;
+
+    DatabaseService.pruneSnapshots(50);
+  
+});
+
 export const snapshotsAtom = atom(
   (get) => {
     const data = get(_snapshotsStorageAtom);

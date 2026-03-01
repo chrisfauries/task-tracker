@@ -73,6 +73,35 @@ export const workerOrderSettingsSyncEffect = atomEffect((get, set) => {
   };
 });
 
+
+export const personalWorkerPositionsCleanupEffect = atomEffect((get) => {
+  const user = get(userAtom);
+  const boardData = get(boardDataAtom);
+  const personalPositions = get(personalWorkerPositionsAtom);
+
+  if (!user || !boardData || !personalPositions) return;
+
+  // Avoid cleanup if boardData is not loaded (empty) to prevent accidental deletion
+  // of all personal positions during initial load.
+  if (Object.keys(boardData).length === 0) return;
+
+  const updates: Record<string, null> = {};
+  let hasUpdates = false;
+
+  Object.keys(personalPositions).forEach((workerId) => {
+    // If the worker ID in personal positions does not exist in the global board data,
+    // mark it for deletion.
+    if (!boardData[workerId]) {
+      updates[workerId] = null;
+      hasUpdates = true;
+    }
+  });
+
+  if (hasUpdates) {
+    DatabaseService.updatePersonalWorkerPositions(user.uid, updates);
+  }
+});
+
 const workerSortDependenciesAtom = atom((get) => ({
   board: get(boardDataAtom),
   mode: get(workerOrderModeAtom),

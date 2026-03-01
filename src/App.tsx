@@ -31,6 +31,8 @@ import {
   dragOriginEffect,
   historyEffectAtom,
   workerOrderSettingsSyncEffect,
+  personalWorkerPositionsCleanupEffect,
+  snapshotsCleanupEffect,
 } from "./atoms";
 
 export default function App() {
@@ -48,6 +50,8 @@ export default function App() {
   useAtomValue(dragOriginEffect);
   useAtomValue(historyEffectAtom);
   useAtomValue(workerOrderSettingsSyncEffect);
+  useAtomValue(personalWorkerPositionsCleanupEffect);
+  useAtomValue(snapshotsCleanupEffect);
 
   const handleLogin = () => {
     signInWithPopup(auth, provider);
