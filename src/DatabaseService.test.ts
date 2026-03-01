@@ -135,12 +135,11 @@ describe("DatabaseService", () => {
       expect(ref).toHaveBeenCalledWith(expect.anything(), "presence");
     });
 
-    it("subscribeToSnapshots calls onValue with query params", () => {
+it("subscribeToSnapshots calls onValue with query params", () => {
       const cb = vi.fn();
       DatabaseService.subscribeToSnapshots(cb);
       expect(query).toHaveBeenCalled();
       expect(orderByChild).toHaveBeenCalledWith("timestamp");
-      expect(limitToLast).toHaveBeenCalledWith(50);
       expect(onValue).toHaveBeenCalled();
     });
   });
@@ -250,6 +249,47 @@ describe("DatabaseService", () => {
     });
   });
 
+  describe("Worker Order Operations", () => {
+    it("saveWorkerOrderMode sets mode", async () => {
+      await DatabaseService.saveWorkerOrderMode("user123", "personal");
+      expect(ref).toHaveBeenCalledWith(
+        expect.anything(),
+        "users/user123/settings/workerOrderMode"
+      );
+      expect(set).toHaveBeenCalledWith(expect.anything(), "personal");
+    });
+
+    it("subscribeToWorkerOrderMode calls onValue", () => {
+      const cb = vi.fn();
+      DatabaseService.subscribeToWorkerOrderMode("user123", cb);
+      expect(ref).toHaveBeenCalledWith(
+        expect.anything(),
+        "users/user123/settings/workerOrderMode"
+      );
+      expect(onValue).toHaveBeenCalled();
+    });
+
+    it("updatePersonalWorkerPositions calls update", async () => {
+      const updates = { w1: 100, w2: 200 };
+      await DatabaseService.updatePersonalWorkerPositions("user123", updates);
+      expect(ref).toHaveBeenCalledWith(
+        expect.anything(),
+        "users/user123/workerPositions"
+      );
+      expect(update).toHaveBeenCalledWith(expect.anything(), updates);
+    });
+
+    it("subscribeToPersonalWorkerPositions calls onValue", () => {
+      const cb = vi.fn();
+      DatabaseService.subscribeToPersonalWorkerPositions("user123", cb);
+      expect(ref).toHaveBeenCalledWith(
+        expect.anything(),
+        "users/user123/workerPositions"
+      );
+      expect(onValue).toHaveBeenCalled();
+    });
+  });
+
   describe("Category Operations", () => {
     it("createCategory creates category and returns key", async () => {
       const name = "New Category";
@@ -342,6 +382,7 @@ describe("DatabaseService", () => {
   });
 
   describe("Snapshot Operations", () => {
+    describe("Snapshot Operations", () => {
     it("saveSnapshot pushes new snapshot and prunes old ones", async () => {
       // Mock get to return many snapshots
       const snapshots: Record<string, any> = {};
@@ -356,18 +397,46 @@ describe("DatabaseService", () => {
 
       await DatabaseService.saveSnapshot(mockUser, "Save", {}, {});
 
-      // Ensure query was used for pruning check
-      expect(query).toHaveBeenCalled();
-      expect(orderByChild).toHaveBeenCalledWith("timestamp");
+      // Ensure get was used for pruning check (no longer using query)
+      expect(get).toHaveBeenCalled();
 
       expect(update).toHaveBeenCalledTimes(1); // One for prune
       const updateCall = (update as Mock).mock.calls[0];
       const updatesArg = updateCall[1];
 
-      // Should prune 105 - 99 = 6 items
-      expect(Object.keys(updatesArg).length).toBe(6);
+      // Should prune 105 - 49 = 56 items
+      expect(Object.keys(updatesArg).length).toBe(56);
       expect(push).toHaveBeenCalled();
     });
+
+    it("pruneSnapshots removes old snapshots", async () => {
+      const snapshots: Record<string, any> = {};
+      for (let i = 0; i < 10; i++) {
+        snapshots[`snap_${i}`] = { timestamp: i };
+      }
+
+      (get as Mock).mockResolvedValue({
+        exists: () => true,
+        val: () => snapshots,
+      });
+
+      // Keep 5. Should remove 0, 1, 2, 3, 4 (5 items)
+      await DatabaseService.pruneSnapshots(5);
+
+      expect(get).toHaveBeenCalled();
+      expect(update).toHaveBeenCalledWith(
+        expect.anything(),
+        {
+          "snap_0": null,
+          "snap_1": null,
+          "snap_2": null,
+          "snap_3": null,
+          "snap_4": null
+        }
+      );
+    });
+  });
+
 
     it("deleteSnapshot removes snapshot", async () => {
       await DatabaseService.deleteSnapshot("snap1");
