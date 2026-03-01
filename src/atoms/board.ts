@@ -25,13 +25,76 @@ export const boardDataSyncEffect = atomEffect((get, set) => {
   return () => unsubscribe();
 });
 
+const _workerOrderModeAtom = atom<"global" | "personal">("global");
+const _personalWorkerPositionsAtom = atom<Record<string, number>>({});
+
+export const workerOrderModeAtom = atom(
+  (get) => get(_workerOrderModeAtom),
+  (get, set, newMode: "global" | "personal") => {
+    set(_workerOrderModeAtom, newMode);
+    const user = get(userAtom);
+    if (user) {
+      DatabaseService.saveWorkerOrderMode(user.uid, newMode);
+    }
+  },
+);
+
+export const personalWorkerPositionsAtom = atom(
+  (get) => get(_personalWorkerPositionsAtom),
+  (_, set, positions: Record<string, number>) =>
+    set(_personalWorkerPositionsAtom, positions),
+);
+
+export const workerOrderSettingsSyncEffect = atomEffect((get, set) => {
+  const user = get(userAtom);
+  if (!user) {
+    set(_workerOrderModeAtom, "global");
+    set(_personalWorkerPositionsAtom, {});
+    return;
+  }
+
+  const unsubMode = DatabaseService.subscribeToWorkerOrderMode(
+    user.uid,
+    (mode) => {
+      set(_workerOrderModeAtom, mode);
+    },
+  );
+
+  const unsubPositions = DatabaseService.subscribeToPersonalWorkerPositions(
+    user.uid,
+    (positions) => {
+      set(_personalWorkerPositionsAtom, positions);
+    },
+  );
+
+  return () => {
+    unsubMode();
+    unsubPositions();
+  };
+});
+
+const workerSortDependenciesAtom = atom((get) => ({
+  board: get(boardDataAtom),
+  mode: get(workerOrderModeAtom),
+  personalPositions: get(personalWorkerPositionsAtom),
+}));
+
 // Worker Ids
 export const workerIdsAtom = selectAtom(
-  boardDataAtom,
-  (board) => {
+  workerSortDependenciesAtom,
+  ({ board, mode, personalPositions }) => {
     return Object.keys(board || {}).sort((a, b) => {
-      const posA = board[a].position ?? Number.MAX_SAFE_INTEGER;
-      const posB = board[b].position ?? Number.MAX_SAFE_INTEGER;
+      let posA = Number.MAX_SAFE_INTEGER;
+      let posB = Number.MAX_SAFE_INTEGER;
+
+      if (mode === "personal") {
+        posA = personalPositions[a] ?? Number.MAX_SAFE_INTEGER;
+        posB = personalPositions[b] ?? Number.MAX_SAFE_INTEGER;
+      } else {
+        posA = board[a].position ?? Number.MAX_SAFE_INTEGER;
+        posB = board[b].position ?? Number.MAX_SAFE_INTEGER;
+      }
+
       if (posA === posB) {
         return (board[a].name || "").localeCompare(board[b].name || "");
       }

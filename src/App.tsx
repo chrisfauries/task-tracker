@@ -30,6 +30,7 @@ import {
   snapshotsLoginSyncEffect,
   dragOriginEffect,
   historyEffectAtom,
+  workerOrderSettingsSyncEffect,
 } from "./atoms";
 
 export default function App() {
@@ -46,6 +47,7 @@ export default function App() {
   useAtomValue(snapshotsLoginSyncEffect);
   useAtomValue(dragOriginEffect);
   useAtomValue(historyEffectAtom);
+  useAtomValue(workerOrderSettingsSyncEffect);
 
   const handleLogin = () => {
     signInWithPopup(auth, provider);

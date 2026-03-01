@@ -7,7 +7,6 @@ import {
   logoutAtom,
 } from "./atoms";
 
-
 export const AppSettingsMenu = () => {
   const logout = useSetAtom(logoutAtom);
   const [position, setPosition] = useAtom(appSettingsMenuPosAtom);
@@ -30,7 +29,7 @@ export const AppSettingsMenu = () => {
       >
         <div className="px-4 py-3 flex justify-between items-center border-b border-slate-100 dark:border-slate-700">
           <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-           {darkMode ? "Light Mode" : "Dark Mode"}
+            {darkMode ? "Light Mode" : "Dark Mode"}
           </span>
 
           <label
@@ -62,7 +61,6 @@ export const AppSettingsMenu = () => {
           </label>
         </div>
 
-
         <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
 
         <button
@@ -70,6 +68,12 @@ export const AppSettingsMenu = () => {
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           Manage Categories
+        </button>
+        <button
+          onClick={() => handleAction(() => open(Dialog.WORKER_ORDER))}
+          className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
+        >
+          Manage Workers
         </button>
         <button
           onClick={() => handleAction(() => open(Dialog.CUSTOM_COLORS))}
@@ -88,21 +92,6 @@ export const AppSettingsMenu = () => {
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           Import/Export
-        </button>
-
-        <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
-
-        <button
-          onClick={() => handleAction(() => open(Dialog.ADD_WORKER))}
-          className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-emerald-600 dark:text-emerald-400"
-        >
-          Add Worker
-        </button>
-        <button
-          onClick={() => handleAction(() => open(Dialog.WORKER_ORDER))}
-          className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
-        >
-          Manage Worker Order
         </button>
 
         <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />

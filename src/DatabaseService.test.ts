@@ -220,7 +220,7 @@ describe("DatabaseService", () => {
   describe("Worker Operations", () => {
     it("createWorker pushes new worker", async () => {
       await DatabaseService.createWorker("Dave", 3); // 3 = Red
-      expect(push).toHaveBeenCalledWith(
+      expect(set).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({ name: "Dave", defaultColor: 3 })
       );

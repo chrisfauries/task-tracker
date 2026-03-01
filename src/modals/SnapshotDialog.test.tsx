@@ -29,6 +29,17 @@ vi.mock("firebase/auth", () => ({
   GoogleAuthProvider: vi.fn(),
 }));
 
+vi.mock("../atoms", async (importOriginal) => {
+  const actual = await importOriginal<any>();
+  const { atom } = await import("jotai");
+  const mockStorageAtom = atom({}); // Default to non-null (loaded)
+  return {
+    ...actual,
+    _snapshotsStorageAtom: mockStorageAtom,
+    snapshotsLoadingAtom: atom((get) => get(mockStorageAtom) === null),
+  };
+});
+
 // Mock alert and console
 const mockAlert = vi.spyOn(window, "alert").mockImplementation(() => {});
 vi.spyOn(console, "error").mockImplementation(() => {});
