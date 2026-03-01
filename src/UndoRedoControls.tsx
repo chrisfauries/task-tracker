@@ -14,8 +14,8 @@ export function UndoRedoControls() {
         disabled={!canUndo}
         className={`p-2 rounded-lg transition-all border ${
           !canUndo
-            ? "text-slate-300 border-transparent cursor-not-allowed"
-            : "text-slate-600 border-slate-200 hover:bg-slate-100 hover:shadow-sm"
+            ? "text-slate-300 dark:text-slate-600 border-transparent cursor-not-allowed"
+            : "text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:shadow-sm"
         }`}
         title="Undo"
       >
@@ -39,8 +39,8 @@ export function UndoRedoControls() {
         disabled={!canRedo}
         className={`p-2 rounded-lg transition-all border ${
           !canRedo
-            ? "text-slate-300 border-transparent cursor-not-allowed"
-            : "text-slate-600 border-slate-200 hover:bg-slate-100 hover:shadow-sm"
+            ? "text-slate-300 dark:text-slate-600 border-transparent cursor-not-allowed"
+            : "text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:shadow-sm"
         }`}
         title="Redo"
       >

@@ -1,99 +1,20 @@
-import React, { useRef, useCallback, useEffect } from "react";
+import { useRef } from "react";
 import { useAtomValue } from "jotai";
 import { WorkerRow } from "./WorkerRow";
 import { COLUMN_NAMES } from "./constants";
-import { workerIdsAtom, dragOriginAtom } from "./atoms";
+import { workerIdsAtom } from "./atoms";
+import { useAutoScroll } from "./hooks/useAutoScroll";
 
 export function Board() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const autoScrollSpeed = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
-  const animationFrameId = useRef<number | null>(null);
-  
   const workerIds = useAtomValue(workerIdsAtom);
-  const dragOrigin = useAtomValue(dragOriginAtom);
-
-  const performAutoScroll = useCallback(() => {
-    if (scrollContainerRef.current && (autoScrollSpeed.current.x !== 0 || autoScrollSpeed.current.y !== 0)) {
-      scrollContainerRef.current.scrollLeft += autoScrollSpeed.current.x;
-      scrollContainerRef.current.scrollTop += autoScrollSpeed.current.y;
-      animationFrameId.current = requestAnimationFrame(performAutoScroll);
-    } else {
-      animationFrameId.current = null;
-    }
-  }, []);
-
-  const handleDragOverCapture = (e: React.DragEvent) => {
-    if (!dragOrigin || !scrollContainerRef.current) return;
-
-    const container = scrollContainerRef.current;
-    const { top, bottom, left, right } = container.getBoundingClientRect();
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-
-    const zoneSize = 200; 
-    const maxSpeed = 70;
-
-    let nextX = 0;
-    let nextY = 0;
-
-    if (mouseX < left + zoneSize) {
-      const distance = Math.max(0, mouseX - left);
-      const intensity = 1 - distance / zoneSize;
-      nextX = -Math.max(2, (intensity * intensity) * maxSpeed);
-    } else if (mouseX > right - zoneSize) {
-      const distance = Math.max(0, right - mouseX);
-      const intensity = 1 - distance / zoneSize;
-      nextX = Math.max(2, (intensity * intensity) * maxSpeed);
-    }
-
-    if (mouseY < top + zoneSize) {
-      const distance = Math.max(0, mouseY - top);
-      const intensity = 1 - distance / zoneSize;
-      nextY = -Math.max(2, (intensity * intensity) * maxSpeed);
-    } else if (mouseY > bottom - zoneSize) {
-      const distance = Math.max(0, bottom - mouseY);
-      const intensity = 1 - distance / zoneSize;
-      nextY = Math.max(2, (intensity * intensity) * maxSpeed);
-    }
-
-    autoScrollSpeed.current = { x: nextX, y: nextY };
-
-    if ((nextX !== 0 || nextY !== 0) && !animationFrameId.current) {
-      performAutoScroll();
-    } else if (nextX === 0 && nextY === 0 && animationFrameId.current) {
-        cancelAnimationFrame(animationFrameId.current);
-        animationFrameId.current = null;
-    }
-  };
-
-  const stopAutoScroll = () => {
-    autoScrollSpeed.current = { x: 0, y: 0 };
-    if (animationFrameId.current) {
-      cancelAnimationFrame(animationFrameId.current);
-      animationFrameId.current = null;
-    }
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    if (
-      scrollContainerRef.current &&
-      !scrollContainerRef.current.contains(e.relatedTarget as Node)
-    ) {
-      stopAutoScroll();
-    }
-  };
-
-  useEffect(() => {
-    if (!dragOrigin) {
-      stopAutoScroll();
-    }
-  }, [dragOrigin]);
+  const { handleDragOver, handleDragLeave } = useAutoScroll(scrollContainerRef);
 
   return (
-    <div 
+    <div
       ref={scrollContainerRef}
       className="flex-1 overflow-auto py-2"
-      onDragOverCapture={handleDragOverCapture}
+      onDragOverCapture={handleDragOver}
       onDragLeave={handleDragLeave}
     >
       <div className="min-w-[100%] flex flex-col">
@@ -112,10 +33,7 @@ export function Board() {
 
         {/* Worker Rows */}
         {workerIds.map((workerId) => (
-          <WorkerRow
-            key={workerId}
-            workerId={workerId}
-          />
+          <WorkerRow key={workerId} workerId={workerId} />
         ))}
       </div>
     </div>

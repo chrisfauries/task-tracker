@@ -6,6 +6,9 @@ import { userAtom } from "./user";
 // Drag Origin Atom
 export const dragOriginAtom = atom<DragOrigin | null>(null);
 
+export const isDraggingAtom = atom((get) => get(dragOriginAtom) !== null);
+
+
 export const dragOriginEffect = atomEffect((get, set) => {
   const user = get(userAtom);
   if (!user) return;

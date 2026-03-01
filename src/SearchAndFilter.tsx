@@ -36,7 +36,7 @@ export function SearchAndFilter() {
   const activeFiltersCount = selectedCats.length;
 
   return (
-    <div className="flex items-center gap-2 mr-3 px-2 border-r border-slate-200 h-8">
+    <div className="flex items-center gap-2 mr-3 px-2 border-r border-slate-200 dark:border-slate-700 h-8">
       <div className="relative">
         <span className="absolute inset-y-0 left-0 flex items-center pl-2 text-slate-400">
           🔍
@@ -46,12 +46,12 @@ export function SearchAndFilter() {
           placeholder="Search..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          className="pl-8 pr-3 py-1 bg-slate-100 border-none rounded-lg text-sm w-48 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white transition-all outline-none text-slate-700 placeholder:text-slate-400 font-medium"
+          className="pl-8 pr-3 py-1 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm w-48 focus:ring-2 focus:ring-indigo-500/20 focus:bg-white dark:focus:bg-slate-900 transition-all outline-none text-slate-700 dark:text-slate-200 placeholder:text-slate-400 font-medium"
         />
         {query && (
           <button
             onClick={() => setQuery("")}
-            className="absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400 hover:text-slate-600"
+            className="absolute inset-y-0 right-0 flex items-center pr-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
           >
             ✕
           </button>
@@ -63,8 +63,8 @@ export function SearchAndFilter() {
           onClick={() => setIsFilterOpen(!isFilterOpen)}
           className={`p-1.5 rounded-lg transition-colors relative ${
             isFilterOpen || activeFiltersCount > 0
-              ? "bg-indigo-50 text-indigo-600"
-              : "text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400"
+              : "text-slate-400 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
           }`}
           title="Filter by category"
         >
@@ -81,20 +81,20 @@ export function SearchAndFilter() {
             <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
           </svg>
           {activeFiltersCount > 0 && (
-            <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-[9px] font-bold px-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center border-2 border-white">
+            <span className="absolute -top-1 -right-1 bg-indigo-600 text-white text-[9px] font-bold px-1 min-w-[14px] h-[14px] rounded-full flex items-center justify-center border-2 border-white dark:border-slate-900">
               {activeFiltersCount}
             </span>
           )}
         </button>
 
         {isFilterOpen && (
-          <div className="absolute top-full right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-3 bg-slate-50 border-b flex justify-between items-center">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Categories</span>
+          <div className="absolute top-full right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="p-3 bg-slate-50 dark:bg-slate-900 border-b dark:border-slate-700 flex justify-between items-center">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Categories</span>
               {activeFiltersCount > 0 && (
                 <button
                   onClick={() => setSelectedCats([])}
-                  className="text-xs text-blue-600 hover:text-blue-700 hover:underline"
+                  className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 hover:underline"
                 >
                   Clear all
                 </button>
@@ -109,11 +109,11 @@ export function SearchAndFilter() {
                 sortedCategories.map((cat) => (
                   <label
                     key={cat.name}
-                    className="flex items-center gap-2 px-2 py-2 hover:bg-slate-50 rounded cursor-pointer select-none text-sm text-slate-700"
+                    className="flex items-center gap-2 px-2 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded cursor-pointer select-none text-sm text-slate-700 dark:text-slate-200"
                   >
                     <input
                       type="checkbox"
-                      className="rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
+                      className="rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500/20 dark:bg-slate-700"
                       checked={selectedCats.includes(cat.name)}
                       onChange={() => toggleCategory(cat.name)}
                     />

@@ -1,8 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { Provider, createStore } from "jotai";
 import { WorkerOrderDialog } from "./WorkerOrderDialog";
-import { isDialogOpen, openDialog, Dialog, boardDataAtom, userAtom, workerOrderModeAtom, personalWorkerPositionsAtom } from "../atoms";
+import {
+  openDialog,
+  Dialog,
+  boardDataAtom,
+  workerOrderModeAtom,
+  personalWorkerPositionsAtom,
+} from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 
 vi.mock("../DatabaseService", () => ({
@@ -21,7 +33,12 @@ vi.mock("../atoms", async (importOriginal) => {
   const { atom } = await import("jotai");
   return {
     ...actual,
-    userAtom: atom({ uid: "test-user", displayName: "Test User", email: "test@example.com", photoURL: null }),
+    userAtom: atom({
+      uid: "test-user",
+      displayName: "Test User",
+      email: "test@example.com",
+      photoURL: null,
+    }),
   };
 });
 
@@ -32,11 +49,16 @@ describe("WorkerOrderDialog", () => {
     vi.clearAllMocks();
     store = createStore();
     store.set(openDialog, Dialog.WORKER_ORDER);
-    
+
     // Setup initial board data
     store.set(boardDataAtom, {
       "worker-2": { name: "Bob", position: 1000, defaultColor: 0, notes: {} },
-      "worker-3": { name: "Charlie", position: 3000, defaultColor: 1, notes: {} }, 
+      "worker-3": {
+        name: "Charlie",
+        position: 3000,
+        defaultColor: 1,
+        notes: {},
+      },
       "worker-1": { name: "Alice", position: 2000, defaultColor: 2, notes: {} },
     });
   });
@@ -49,7 +71,7 @@ describe("WorkerOrderDialog", () => {
     return render(
       <Provider store={store}>
         <WorkerOrderDialog />
-      </Provider>
+      </Provider>,
     );
   };
 
@@ -81,7 +103,7 @@ describe("WorkerOrderDialog", () => {
       expect(DatabaseService.createWorker).toHaveBeenCalledWith("David", 0);
       // Should also update positions to include new worker at end
       expect(DatabaseService.updateWorkerPositions).toHaveBeenCalledWith({
-        "new-worker-id": 4000 // Max pos (3000) + 1000
+        "new-worker-id": 4000, // Max pos (3000) + 1000
       });
     });
   });
@@ -90,8 +112,10 @@ describe("WorkerOrderDialog", () => {
     renderDialog();
 
     // Find Alice's row
-    const aliceRow = screen.getByText("Alice").closest("div[draggable]") as HTMLElement;
-    
+    const aliceRow = screen
+      .getByText("Alice")
+      .closest("div[draggable]") as HTMLElement;
+
     // Click edit button (pencil)
     const editBtn = within(aliceRow).getByTitle("Edit");
     fireEvent.click(editBtn);
@@ -103,7 +127,7 @@ describe("WorkerOrderDialog", () => {
     // Change color (click second color circle, index 1)
     const editContainer = input.closest("div.p-3") as HTMLElement;
     const colorButtons = within(editContainer).getAllByRole("button");
-    // The first few buttons are colors. 
+    // The first few buttons are colors.
     // We want index 1 (second color).
     fireEvent.click(colorButtons[1]);
 
@@ -114,7 +138,7 @@ describe("WorkerOrderDialog", () => {
     await waitFor(() => {
       expect(DatabaseService.updateWorker).toHaveBeenCalledWith("worker-1", {
         name: "Alice Cooper",
-        defaultColor: 1
+        defaultColor: 1,
       });
     });
   });
@@ -122,7 +146,9 @@ describe("WorkerOrderDialog", () => {
   it("deletes a worker", async () => {
     renderDialog();
 
-    const bobRow = screen.getByText("Bob").closest("div[draggable]") as HTMLElement;
+    const bobRow = screen
+      .getByText("Bob")
+      .closest("div[draggable]") as HTMLElement;
     const deleteBtn = within(bobRow).getByTitle("Delete");
     fireEvent.click(deleteBtn);
 
@@ -140,25 +166,55 @@ describe("WorkerOrderDialog", () => {
   it("reorders workers via drag and drop (Global Mode)", async () => {
     renderDialog();
 
-    const rows = screen.getAllByText(/Alice|Bob|Charlie/).map(el => el.closest("div[draggable]") as HTMLElement);
-    
+    const rows = screen
+      .getAllByText(/Alice|Bob|Charlie/)
+      .map((el) => el.closest("div[draggable]") as HTMLElement);
+
     // Mock geometry
-    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function(this: HTMLElement) {
-       const index = rows.indexOf(this);
-       if (index !== -1) {
-         return { top: index * 50, height: 50, bottom: (index + 1) * 50, left: 0, right: 100, width: 100, x: 0, y: index * 50, toJSON: () => {} } as DOMRect;
-       }
-       // Fallback for container
-       return { top: 0, height: 150, bottom: 150, left: 0, right: 100, width: 100, x: 0, y: 0, toJSON: () => {} } as DOMRect;
-    });
-    
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const index = rows.indexOf(this);
+        if (index !== -1) {
+          return {
+            top: index * 50,
+            height: 50,
+            bottom: (index + 1) * 50,
+            left: 0,
+            right: 100,
+            width: 100,
+            x: 0,
+            y: index * 50,
+            toJSON: () => {},
+          } as DOMRect;
+        }
+        // Fallback for container
+        return {
+          top: 0,
+          height: 150,
+          bottom: 150,
+          left: 0,
+          right: 100,
+          width: 100,
+          x: 0,
+          y: 0,
+          toJSON: () => {},
+        } as DOMRect;
+      },
+    );
+
     rows.forEach((row, index) => {
-        Object.defineProperty(row, 'offsetTop', { configurable: true, value: index * 50 });
-        Object.defineProperty(row, 'offsetHeight', { configurable: true, value: 50 });
+      Object.defineProperty(row, "offsetTop", {
+        configurable: true,
+        value: index * 50,
+      });
+      Object.defineProperty(row, "offsetHeight", {
+        configurable: true,
+        value: 50,
+      });
     });
 
     const listContainer = rows[0].parentElement as HTMLElement;
-    
+
     // Drag Bob (index 0) to below Charlie (index 2)
     fireEvent.dragStart(rows[0]);
     fireEvent.dragOver(listContainer, { clientY: 125 }); // 125 is > 100 (Charlie top) + 25 (half height)
@@ -170,8 +226,99 @@ describe("WorkerOrderDialog", () => {
       expect(DatabaseService.updateWorkerPositions).toHaveBeenCalledWith({
         "worker-1": 1000,
         "worker-3": 2000,
-        "worker-2": 3000
+        "worker-2": 3000,
       });
+    });
+  });
+
+  it("reorders workers via drag and drop (Personal Mode)", async () => {
+    renderDialog();
+
+    // Switch to Personal mode
+    fireEvent.click(screen.getByText("Personal"));
+
+    // Set initial personal order to be different from global
+    // Charlie (1), Bob (2), Alice (3)
+    store.set(personalWorkerPositionsAtom, {
+      "worker-3": 1000,
+      "worker-2": 2000,
+      "worker-1": 3000,
+    });
+    
+    // Let React re-render with the new order
+    await waitFor(() => {
+      const items = screen.getAllByText(/Alice|Bob|Charlie/);
+      expect(items[0]).toHaveTextContent("Charlie");
+      expect(items[1]).toHaveTextContent("Bob");
+      expect(items[2]).toHaveTextContent("Alice");
+    });
+
+    const rows = screen
+      .getAllByText(/Alice|Bob|Charlie/)
+      .map((el) => el.closest("div[draggable]") as HTMLElement);
+
+    // Mock geometry
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: HTMLElement) {
+        const index = rows.indexOf(this);
+        if (index !== -1) {
+          return {
+            top: index * 50,
+            height: 50,
+            bottom: (index + 1) * 50,
+            left: 0,
+            right: 100,
+            width: 100,
+            x: 0,
+            y: index * 50,
+            toJSON: () => {},
+          } as DOMRect;
+        }
+        // Fallback for container
+        return {
+          top: 0,
+          height: 150,
+          bottom: 150,
+          left: 0,
+          right: 100,
+          width: 100,
+          x: 0,
+          y: 0,
+          toJSON: () => {},
+        } as DOMRect;
+      },
+    );
+
+    rows.forEach((row, index) => {
+      Object.defineProperty(row, "offsetTop", {
+        configurable: true,
+        value: index * 50,
+      });
+      Object.defineProperty(row, "offsetHeight", {
+        configurable: true,
+        value: 50,
+      });
+    });
+
+    const listContainer = rows[0].parentElement as HTMLElement;
+
+    // Drag Charlie (index 0) to below Alice (index 2)
+    fireEvent.dragStart(rows[0]);
+    fireEvent.dragOver(listContainer, { clientY: 125 });
+    fireEvent.drop(listContainer);
+
+    await waitFor(() => {
+      // Charlie moves to end.
+      // New Order: Bob, Alice, Charlie
+      expect(
+        DatabaseService.updatePersonalWorkerPositions,
+      ).toHaveBeenCalledWith("test-user", {
+        "worker-2": 1000,
+        "worker-1": 2000,
+        "worker-3": 3000,
+      });
+
+      expect(DatabaseService.updateWorkerPositions).not.toHaveBeenCalled();
     });
   });
 
@@ -180,14 +327,14 @@ describe("WorkerOrderDialog", () => {
 
     // Switch to Personal
     fireEvent.click(screen.getByText("Personal"));
-    
+
     expect(store.get(workerOrderModeAtom)).toBe("personal");
 
     // Seed personal positions so they aren't MAX_SAFE_INTEGER
     store.set(personalWorkerPositionsAtom, {
       "worker-2": 1000,
       "worker-1": 2000,
-      "worker-3": 3000
+      "worker-3": 3000,
     });
 
     // Add a worker in personal mode
@@ -198,10 +345,9 @@ describe("WorkerOrderDialog", () => {
     fireEvent.click(screen.getByTitle("Confirm Add"));
 
     await waitFor(() => {
-      expect(DatabaseService.updatePersonalWorkerPositions).toHaveBeenCalledWith(
-        "test-user",
-        { "personal-worker": 4000 }
-      );
+      expect(
+        DatabaseService.updatePersonalWorkerPositions,
+      ).toHaveBeenCalledWith("test-user", { "personal-worker": 4000 });
     });
   });
 });

@@ -13,6 +13,7 @@ import {
   registerHistoryAtom,
   trackActivityAtom,
   userAtom,
+  lockFamily,
 } from "./atoms";
 
 interface StickyNoteProps {
@@ -88,7 +89,7 @@ export function StickyNote({
   const note = useAtomValue(noteFamily({workerId, noteId: id}));
   const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
   const setContextMenuPos = useSetAtom(contextMenuPosAtom);
-  const locks = useAtomValue(locksAtom);
+  const lock = useAtomValue(lockFamily(id));
 
   const searchQuery = useAtomValue(searchQueryAtom);
   const selectedCategories = useAtomValue(selectedCategoriesAtom);
@@ -110,7 +111,6 @@ export function StickyNote({
   if (!note) return null;
   const { text, color, column, categoryName, dueDate, position } = note;
 
-  const lock = locks[id];
   const now = Date.now();
   const isLockValid = lock && now - lock.timestamp < 2 * 60 * 1000;
   const isLockedByOther = isLockValid && lock.userId !== currentUser?.uid;
