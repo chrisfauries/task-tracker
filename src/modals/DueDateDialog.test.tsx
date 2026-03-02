@@ -3,8 +3,8 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DueDateDialog } from "./DueDateDialog";
 import { DatabaseService } from "../DatabaseService";
 import { Provider, createStore } from "jotai";
-import { isDialogOpen, openDialog, Dialog, addToCategoryTargetAtom } from "../atoms";
-import type { AddToCategoryTarget } from "../types";
+import { isDialogOpen, openDialog, Dialog, noteContextTargetAtom } from "../atoms";
+import type { NoteContextTarget } from "../types";
 
 // Mock DatabaseService
 vi.mock("../DatabaseService", () => ({
@@ -20,7 +20,7 @@ vi.mock("firebase/auth", () => ({
 }));
 
 describe("DueDateDialog", () => {
-  const mockTarget: AddToCategoryTarget = {
+  const mockTarget: NoteContextTarget = {
     id: "note-123",
     workerId: "worker-abc",
     text: "Test Note",
@@ -32,7 +32,7 @@ describe("DueDateDialog", () => {
   beforeEach(() => {
     store = createStore();
     store.set(openDialog, Dialog.DUE_DATE);
-    store.set(addToCategoryTargetAtom, mockTarget);
+    store.set(noteContextTargetAtom, mockTarget);
 
     vi.clearAllMocks();
     
@@ -74,7 +74,7 @@ describe("DueDateDialog", () => {
   });
 
   it("initializes with the existing due date selected", () => {
-    store.set(addToCategoryTargetAtom, { ...mockTarget, dueDate: "2025-02-20" });
+    store.set(noteContextTargetAtom, { ...mockTarget, dueDate: "2025-02-20" });
     renderDialog();
 
     // Should auto-navigate to February
@@ -144,7 +144,7 @@ describe("DueDateDialog", () => {
   });
 
   it("clears the date when Clear is clicked", async () => {
-    store.set(addToCategoryTargetAtom, { ...mockTarget, dueDate: "2025-02-20" });
+    store.set(noteContextTargetAtom, { ...mockTarget, dueDate: "2025-02-20" });
     renderDialog();
 
     fireEvent.click(screen.getByText("Clear"));

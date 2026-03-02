@@ -107,10 +107,12 @@ export interface BackupData {
   customColors: string[];
 }
 
-export interface AddToCategoryTarget {
+export interface NoteContextTarget {
   id: string;
   workerId: string;
   text: string;
   color?: number; 
   dueDate?: string;
+  column?: number;
+  position?: number;
 }

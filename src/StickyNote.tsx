@@ -4,11 +4,10 @@ import { getNoteStyles } from "./constants";
 import { NoteMenu } from "./NoteMenu";
 import { useSetAtom, useAtomValue } from "jotai";
 import {
-  addToCategoryTargetAtom,
+  noteContextTargetAtom,
   contextMenuPosAtom,
   searchQueryAtom,
   selectedCategoriesAtom,
-  locksAtom,
   noteFamily,
   registerHistoryAtom,
   trackActivityAtom,
@@ -87,7 +86,7 @@ export function StickyNote({
   onEditStarted,
 }: StickyNoteProps) {
   const note = useAtomValue(noteFamily({workerId, noteId: id}));
-  const setAddToCategoryTarget = useSetAtom(addToCategoryTargetAtom);
+  const setAddToCategoryTarget = useSetAtom(noteContextTargetAtom);
   const setContextMenuPos = useSetAtom(contextMenuPosAtom);
   const lock = useAtomValue(lockFamily(id));
 
@@ -309,7 +308,7 @@ export function StickyNote({
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setAddToCategoryTarget({ id, workerId, text, color, dueDate });
+    setAddToCategoryTarget({ id, workerId, text, color, dueDate, column, position });
     setContextMenuPos({ x: e.clientX, y: e.clientY });
   };
 

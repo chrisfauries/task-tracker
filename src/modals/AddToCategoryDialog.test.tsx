@@ -7,7 +7,7 @@ import {
   isDialogOpen,
   openDialog,
   Dialog,
-  addToCategoryTargetAtom,
+  noteContextTargetAtom,
   categoriesAtom,
 } from "../atoms";
 import type { CategoriesData } from "../types";
@@ -43,7 +43,7 @@ describe("AddToCategoryDialog", () => {
   beforeEach(() => {
     store = createStore();
     store.set(openDialog, Dialog.ADD_TO_CATEGORY);
-    store.set(addToCategoryTargetAtom, mockTargetNote);
+    store.set(noteContextTargetAtom, mockTargetNote);
     store.set(categoriesAtom, mockCategories);
     vi.clearAllMocks();
   });

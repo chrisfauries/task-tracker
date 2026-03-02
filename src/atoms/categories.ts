@@ -1,7 +1,7 @@
 import { atom } from "jotai";
 import { atomEffect } from "jotai-effect";
 import { DatabaseService } from "../DatabaseService";
-import type { CategoriesData, AddToCategoryTarget } from "../types";
+import type { CategoriesData } from "../types";
 import { userAtom } from "./user";
 import { boardDataAtom } from "./board";
 import { trackActivityAtom } from "./activity";
@@ -9,7 +9,6 @@ import { trackActivityAtom } from "./activity";
 // Category Atoms
 const _categoriesStorageAtom = atom<CategoriesData>({});
 
-export const addToCategoryTargetAtom = atom<AddToCategoryTarget | null>(null);
 export const categoriesAtom = atom(
   (get) => get(_categoriesStorageAtom),
   (_, set, newData: CategoriesData) => set(_categoriesStorageAtom, newData),

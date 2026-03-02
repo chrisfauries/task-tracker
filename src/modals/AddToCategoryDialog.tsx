@@ -7,7 +7,7 @@ import {
   Dialog,
   closeDialog,
   isDialogOpen,
-  addToCategoryTargetAtom
+  noteContextTargetAtom
 } from "../atoms";
 
 export function AddToCategoryDialog() {
@@ -18,7 +18,7 @@ export function AddToCategoryDialog() {
 function AddToCategoryDialogContent() {
   const close = useSetAtom(closeDialog);
   const categories = useAtomValue(categoriesAtom);
-  const [targetNote, setTargetNote] = useAtom(addToCategoryTargetAtom);
+  const [targetNote, setTargetNote] = useAtom(noteContextTargetAtom);
 
   const [newCatName, setNewCatName] = useState("");
   const [isCreating, setIsCreating] = useState(false);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAtomValue, useSetAtom } from "jotai";
-import { isDialogOpen, closeDialog, Dialog, addToCategoryTargetAtom } from "../atoms";
+import { isDialogOpen, closeDialog, Dialog, noteContextTargetAtom } from "../atoms";
 import { DatabaseService } from "../DatabaseService";
 
 const DAYS_OF_WEEK = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
@@ -12,7 +12,7 @@ const MONTH_NAMES = [
 export function DueDateDialog() {
   const isOpen = useAtomValue(isDialogOpen(Dialog.DUE_DATE));
   const close = useSetAtom(closeDialog);
-  const target = useAtomValue(addToCategoryTargetAtom);
+  const target = useAtomValue(noteContextTargetAtom);
 
   // Initialize with the current due date (if any) or Today
   const [viewDate, setViewDate] = useState(new Date());
