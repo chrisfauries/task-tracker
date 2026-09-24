@@ -31,7 +31,6 @@ export class DatabaseService {
   // ==========================================
   // User Settings (Theme)
   // ==========================================
-
   static async saveTheme(userId: string, isDark: boolean): Promise<void> {
     await set(ref(db, `users/${userId}/settings/darkMode`), isDark);
   }
@@ -83,7 +82,6 @@ export class DatabaseService {
   // ==========================================
   // Data Subscriptions
   // ==========================================
-
   static subscribeToBoardData(
     callback: (data: BoardData) => void,
   ): Unsubscribe {
@@ -119,7 +117,6 @@ export class DatabaseService {
   // ==========================================
   // Custom Palette Operations
   // ==========================================
-
   static async saveCustomPalette(colors: string[]): Promise<void> {
     await set(ref(db, "customPalette"), colors);
   }
@@ -135,7 +132,6 @@ export class DatabaseService {
   // ==========================================
   // Note Operations
   // ==========================================
-
   static async getNote(workerId: string, noteId: string): Promise<Note | null> {
     const snap = await get(ref(db, `boarddata/${workerId}/notes/${noteId}`));
     return snap.exists() ? snap.val() : null;
@@ -220,7 +216,6 @@ export class DatabaseService {
   // ==========================================
   // Lock Operations
   // ==========================================
-
   static async acquireLock(noteId: string, user: User): Promise<void> {
     const lockRef = ref(db, `locks/${noteId}`);
     await set(lockRef, {
@@ -244,7 +239,6 @@ export class DatabaseService {
   // ==========================================
   // Worker Operations
   // ==========================================
-
   static async createWorker(
     name: string,
     defaultColor: number,
@@ -278,7 +272,6 @@ export class DatabaseService {
   // ==========================================
   // Category Operations
   // ==========================================
-
   static async createCategory(
     name: string,
     color: number = 0,
@@ -303,7 +296,6 @@ export class DatabaseService {
   // ==========================================
   // Presence Operations
   // ==========================================
-
   static initializePresence(user: User): void {
     const userStatusRef = ref(db, `/presence/${user.uid}`);
     onDisconnect(userStatusRef).remove();
@@ -319,7 +311,6 @@ export class DatabaseService {
   // ==========================================
   // Snapshot & Restore Operations
   // ==========================================
-
   static async saveSnapshot(
     user: User,
     reason: string,
@@ -327,7 +318,6 @@ export class DatabaseService {
     categories: CategoriesData,
   ): Promise<void> {
     const snapRef = ref(db, "snapshots");
-
     // Prune old snapshots
     await this.pruneSnapshots(49);
 
@@ -342,7 +332,7 @@ export class DatabaseService {
     await push(snapRef, newSnap);
   }
 
-    static async pruneSnapshots(maxCount: number): Promise<void> {
+  static async pruneSnapshots(maxCount: number): Promise<void> {
     const snapRef = ref(db, "snapshots");
     try {
       const snapshot = await get(snapRef);
@@ -376,5 +366,22 @@ export class DatabaseService {
     await set(ref(db, "boarddata"), boardData || {});
     await set(ref(db, "categories"), categories || {});
     await set(ref(db, "customPalette"), customColors);
+  }
+
+  // ==========================================
+  // Stats & Leaderboard Operations
+  // ==========================================
+  static async toggleTaskCompletion(workerId: string, noteId: string, isCompleted: boolean): Promise<void> {
+    if (!workerId || !noteId) return;
+    
+    const statsRef = ref(db, `boarddata/${workerId}/stats/completedTasks`);
+    
+    if (isCompleted) {
+      // Record the timestamp when completed
+      await update(statsRef, { [noteId]: Date.now() });
+    } else {
+      // Removing the key gracefully deletes it in Firebase RTDB
+      await update(statsRef, { [noteId]: null });
+    }
   }
 }

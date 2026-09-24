@@ -13,6 +13,7 @@ import { AddToCategoryDialog } from "./modals/AddToCategoryDialog";
 import { CustomColorsDialog } from "./modals/CustomColorDialog";
 import { DueDateDialog } from "./modals/DueDateDialog";
 import { WorkerOrderDialog } from "./modals/WorkerOrderDialog";
+import { LeaderboardDialog } from "./modals/LeaderboardDialog";
 import {
   AddWorkerDialog,
   EditWorkerDialog,
@@ -67,11 +68,9 @@ export default function App() {
       style={{ fontFamily: "Georgia, serif" }}
     >
       <ContextMenu />
-
       <AppSettingsMenu />
 
       <TopBanner />
-
       <Board />
 
       {/* DIALOGS */}
@@ -85,6 +84,7 @@ export default function App() {
       <CategoryManagementDialog />
       <CustomColorsDialog />
       <ImportExportDialog />
+      <LeaderboardDialog />
     </div>
   );
 }

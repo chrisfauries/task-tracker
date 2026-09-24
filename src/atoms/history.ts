@@ -10,7 +10,6 @@ const historyListAtom = atom<HistoryAction[]>([]);
 const pointerAtom = atom<number>(-1);
 
 export const canUndoAtom = atom((get) => get(pointerAtom) >= 0);
-
 export const canRedoAtom = atom((get) => {
   const list = get(historyListAtom);
   const pointer = get(pointerAtom);
@@ -22,9 +21,11 @@ export const registerHistoryAtom = atom(
   (get, set, action: HistoryAction) => {
     const list = get(historyListAtom);
     const pointer = get(pointerAtom);
+
     const newHistory = list.slice(0, pointer + 1);
     set(historyListAtom, [...newHistory, action]);
     set(pointerAtom, pointer + 1);
+
     set(trackActivityAtom);
   },
 );
@@ -57,6 +58,17 @@ export const undoAtom = atom(null, async (get, set) => {
             position: action.prevPos,
           },
         );
+
+        // --- LEADERBOARD STATS TRACKING ---
+        // Reverse tracking updates
+        if (action.prevCol === 2 && action.newCol !== 2) {
+          await DatabaseService.toggleTaskCompletion(action.prevWorkerId, action.noteId, true);
+        } else if (action.newCol === 2 && action.prevCol !== 2) {
+          await DatabaseService.toggleTaskCompletion(action.newWorkerId, action.noteId, false);
+        } else if (action.prevCol === 2 && action.newCol === 2 && action.prevWorkerId !== action.newWorkerId) {
+          await DatabaseService.toggleTaskCompletion(action.newWorkerId, action.noteId, false);
+          await DatabaseService.toggleTaskCompletion(action.prevWorkerId, action.noteId, true);
+        }
       }
       break;
     }
@@ -110,6 +122,17 @@ export const redoAtom = atom(null, async (get, set) => {
           action.newWorkerId,
           { ...currentNote, column: action.newCol, position: action.newPos },
         );
+
+        // --- LEADERBOARD STATS TRACKING ---
+        // Apply tracking updates
+        if (action.newCol === 2 && action.prevCol !== 2) {
+          await DatabaseService.toggleTaskCompletion(action.newWorkerId, action.noteId, true);
+        } else if (action.prevCol === 2 && action.newCol !== 2) {
+          await DatabaseService.toggleTaskCompletion(action.prevWorkerId, action.noteId, false);
+        } else if (action.prevCol === 2 && action.newCol === 2 && action.prevWorkerId !== action.newWorkerId) {
+          await DatabaseService.toggleTaskCompletion(action.prevWorkerId, action.noteId, false);
+          await DatabaseService.toggleTaskCompletion(action.newWorkerId, action.noteId, true);
+        }
       }
       break;
     }

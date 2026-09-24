@@ -18,6 +18,11 @@ export interface WorkerData {
   notes?: Record<string, Note>;
   defaultColor?: number; 
   position?: number;
+  stats?: WorkerStats;
+}
+
+export interface WorkerStats {
+  completedTasks: Record<string, number>; 
 }
 
 export interface Category {

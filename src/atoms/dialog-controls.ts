@@ -13,6 +13,7 @@ export enum Dialog {
   CATEGORY_MANAGEMENT,
   ADD_TO_CATEGORY,
   SNAPSHOT,
+  LEADERBOARD,
 }
 
 const _dialogAtom = atom<Dialog>(Dialog.NONE);
@@ -20,7 +21,6 @@ const _dialogAtom = atom<Dialog>(Dialog.NONE);
 export const isDialogOpen = atomFamily((dialog: Dialog) =>
   atom((get) => get(_dialogAtom) === dialog),
 );
-
 
 export const openDialog = atom(null, (_, set, dialog: Dialog) =>
   set(_dialogAtom, dialog),

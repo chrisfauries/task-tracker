@@ -31,7 +31,6 @@ export const AppSettingsMenu = () => {
           <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
             {darkMode ? "Light Mode" : "Dark Mode"}
           </span>
-
           <label
             className="relative inline-block w-14 h-7 cursor-pointer"
             aria-label="Toggle Dark Mode"
@@ -47,11 +46,9 @@ export const AppSettingsMenu = () => {
               {/* Stars (Hidden in day, visible in night) */}
               <div className="absolute top-1 left-4 w-0.5 h-0.5 bg-white rounded-full opacity-0 peer-checked:opacity-100 transition-opacity duration-500 delay-100 shadow-[4px_2px_0_0_white,8px_-1px_0_0_white]" />
               <div className="absolute bottom-2 left-2 w-[1px] h-[1px] bg-white rounded-full opacity-0 peer-checked:opacity-70 transition-opacity duration-500 delay-200" />
-
               {/* Clouds (Visible in day, hidden in night) */}
               <div className="absolute top-3 right-3 w-3 h-1 bg-white rounded-full opacity-80 peer-checked:opacity-0 transition-opacity duration-500 delay-100 shadow-[2px_-2px_0_1px_white]" />
             </div>
-
             {/* Slider Knob (Sun/Moon) */}
             <div className="absolute top-1 left-1 bg-yellow-300 w-5 h-5 rounded-full shadow-md transition-all duration-500 peer-checked:translate-x-7 peer-checked:bg-slate-100">
               {/* Moon Craters (Only visible when checked/moon) */}
@@ -92,6 +89,15 @@ export const AppSettingsMenu = () => {
           className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-medium text-slate-700 dark:text-slate-200"
         >
           Import/Export
+        </button>
+        
+        <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />
+        
+        <button
+          onClick={() => handleAction(() => open(Dialog.LEADERBOARD))}
+          className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-sm font-bold text-indigo-600 dark:text-indigo-400"
+        >
+          Leaderboard 🥇
         </button>
 
         <div className="h-px bg-slate-200 dark:bg-slate-700 my-1 mx-2" />

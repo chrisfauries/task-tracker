@@ -5,6 +5,7 @@ import { db } from "./firebase";
 import { BELL_SOUND_URL } from "./constants";
 import { StickyNote } from "./StickyNote";
 import type { Note } from "./types";
+import { DatabaseService } from "./DatabaseService";
 import {
   columnNotesListFamily,
   trackActivityAtom,
@@ -22,9 +23,11 @@ export function DropZone({ workerId, colIndex }: DropZoneProps) {
   const defaultColor = useAtomValue(workerDefaultColorFamily(workerId));
   const [isOver, setIsOver] = useState(false);
   const [autoEditId, setAutoEditId] = useState<string | null>(null);
+
   const onActivity = useSetAtom(trackActivityAtom);
   const onHistory = useSetAtom(registerHistoryAtom);
   const [dragOrigin, setDragOrigin] = useAtom(dragOriginAtom);
+
   const sortedNoteItems = useAtomValue(
     columnNotesListFamily({ workerId, colIndex }),
   );
@@ -70,6 +73,21 @@ export function DropZone({ workerId, colIndex }: DropZoneProps) {
         .catch((e) => console.log("Audio play failed", e));
     }
 
+    // --- LEADERBOARD STATS TRACKING ---
+    // If moved into Completed (2) from anywhere else
+    if (colIndex === 2 && oldCol !== 2) {
+      DatabaseService.toggleTaskCompletion(workerId, noteId, true);
+    } 
+    // If moved out of Completed (2) to somewhere else
+    else if (oldCol === 2 && colIndex !== 2) {
+      DatabaseService.toggleTaskCompletion(oldWorkerId, noteId, false);
+    } 
+    // If moving between workers but staying in Completed (2)
+    else if (oldCol === 2 && colIndex === 2 && oldWorkerId !== workerId) {
+      DatabaseService.toggleTaskCompletion(oldWorkerId, noteId, false);
+      DatabaseService.toggleTaskCompletion(workerId, noteId, true);
+    }
+
     onValue(
       ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`),
       (snap) => {
@@ -91,8 +109,10 @@ export function DropZone({ workerId, colIndex }: DropZoneProps) {
     e.preventDefault();
     e.stopPropagation();
     setDragOrigin(null);
+
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
+
     try {
       const { noteId, oldWorkerId } = JSON.parse(rawData);
       onActivity();
@@ -100,6 +120,7 @@ export function DropZone({ workerId, colIndex }: DropZoneProps) {
       const snap = await get(
         ref(db, `boarddata/${oldWorkerId}/notes/${noteId}`),
       );
+
       if (snap.exists()) {
         const noteData = snap.val();
         onHistory({
@@ -121,16 +142,21 @@ export function DropZone({ workerId, colIndex }: DropZoneProps) {
     e.preventDefault();
     setIsOver(false);
     setDragOrigin(null);
+
     const rawData = e.dataTransfer.getData("text/plain");
     if (!rawData) return;
+
     try {
       const { noteId, oldWorkerId, oldColumn, oldPosition } =
         JSON.parse(rawData);
+
       const lastPos =
         sortedNoteItems.length > 0
           ? sortedNoteItems[sortedNoteItems.length - 1].position
           : 0;
+
       handleMove(noteId, oldWorkerId, lastPos + 1000, oldColumn, oldPosition);
+
       remove(ref(db, `locks/${noteId}`));
     } catch (err) {
       console.error(err);
@@ -139,10 +165,12 @@ export function DropZone({ workerId, colIndex }: DropZoneProps) {
 
   const addNote = () => {
     onActivity();
+
     const lastPos =
       sortedNoteItems.length > 0
         ? sortedNoteItems[sortedNoteItems.length - 1].position
         : 0;
+
     const newNoteRef = push(ref(db, `boarddata/${workerId}/notes`));
     const newNote: Note = {
       text: "New Task",
@@ -197,7 +225,6 @@ export function DropZone({ workerId, colIndex }: DropZoneProps) {
             onEditStarted={() => setAutoEditId(null)}
           />
         ))}
-
         <div className="flex items-center justify-center min-h-[100px] aspect-square">
           <button
             onClick={addNote}

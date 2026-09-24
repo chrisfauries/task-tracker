@@ -25,11 +25,11 @@ export function MoveToBoardGrid() {
         }
       });
     }
-    const newPos = maxPos + 1000;
 
+    const newPos = maxPos + 1000;
     const noteData = await DatabaseService.getNote(target.workerId, target.id);
     if (!noteData) return;
-
+    
     const updatedNote = { ...noteData, column: newCol, position: newPos };
 
     onActivity();
@@ -44,6 +44,16 @@ export function MoveToBoardGrid() {
       newPos,
     });
 
+    // --- LEADERBOARD STATS TRACKING ---
+    if (newCol === 2 && target.column !== 2) {
+      await DatabaseService.toggleTaskCompletion(newWorkerId, target.id, true);
+    } else if (target.column === 2 && newCol !== 2) {
+      await DatabaseService.toggleTaskCompletion(target.workerId, target.id, false);
+    } else if (target.column === 2 && newCol === 2 && target.workerId !== newWorkerId) {
+      await DatabaseService.toggleTaskCompletion(target.workerId, target.id, false);
+      await DatabaseService.toggleTaskCompletion(newWorkerId, target.id, true);
+    }
+
     await DatabaseService.moveNote(target.id, target.workerId, newWorkerId, updatedNote);
     setPosition(null);
   };
@@ -53,10 +63,12 @@ export function MoveToBoardGrid() {
       <div className="flex items-center mb-2 px-2">
         <h3 className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex-1 text-center pr-4">Move to...</h3>
       </div>
+
       <div className="grid grid-cols-1 gap-1">
         {workerIds.map((wId) => {
           const worker = boardData[wId];
           if (!worker) return null;
+
           return (
             <div key={wId} className="flex flex-col bg-slate-50 dark:bg-slate-800/50 p-1 rounded-lg border border-slate-100 dark:border-slate-700/50">
             <span className="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 px-1 truncate text-center">{worker.name}</span>
